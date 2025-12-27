@@ -1,0 +1,28 @@
+{
+  "name": "tsklets",
+  "private": true,
+  "workspaces": [
+    "frontend-tsklets/client",
+    "frontend-tsklets/internal",
+    "frontend-tsklets/shared/*",
+    "backend-tsklets/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n API,CLIENT,INTERNAL -c blue,green,magenta \"npm run dev:api\" \"npm run dev:client\" \"npm run dev:internal\"",
+    "dev:api": "cd backend-tsklets/api && npx tsx watch src/index.ts",
+    "dev:client": "cd frontend-tsklets/client && npx vite --port 4010",
+    "dev:internal": "cd frontend-tsklets/internal && npx vite --port 4020",
+    "build": "npm run build --workspaces --if-present",
+    "start": "concurrently -n API,CLIENT,INTERNAL -c blue,green,magenta \"npm run start:api\" \"npm run start:client\" \"npm run start:internal\"",
+    "start:api": "cd backend-tsklets/api && npm start",
+    "start:client": "cd frontend-tsklets/client && npx vite preview --port 4010 --host 0.0.0.0",
+    "start:internal": "cd frontend-tsklets/internal && npx vite preview --port 4020 --host 0.0.0.0",
+    "db:push": "cd backend-tsklets/api && npx drizzle-kit push:pg",
+    "db:seed": "npx tsx backend-tsklets/api/src/db/seed.ts",
+    "db:studio": "cd backend-tsklets/api && npx drizzle-kit studio"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "typescript": "^5.3.3"
+  }
+}
