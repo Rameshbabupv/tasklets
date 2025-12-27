@@ -1,7 +1,7 @@
 # Beads Issue Hierarchy - Tsklets Project
 
 ## Overview
-This document defines the hierarchical structure for organizing work in the Tsklets project using beads.
+This document defines the hierarchical structure for organizing work in the Tsklets project using beads, including the requirements workflow where CEO/BA collaborate with Claude to translate business needs into technical epics and features.
 
 ## Hierarchy Levels
 
@@ -398,6 +398,559 @@ open → in_progress → review → done
 - **Bug**: Problem → "Signup fails for emails with +"
 - **Spike**: Question → "Research OAuth vs JWT trade-offs"
 - **Chore**: Maintenance → "Refactor auth middleware"
+
+## Requirements Workflow (New in v2)
+
+### Overview
+
+The Tsklets project uses a special **Requirements (RQ)** ticket type to bridge business needs and technical implementation. This workflow involves CEO/BA collaboration with Claude to translate high-level requirements into structured epics, features, and use cases.
+
+### Requirements Lifecycle
+
+```
+DRAFT → BRAINSTORM → SOLIDIFIED → IN_DEVELOPMENT → COMPLETED
+  ↑                                                      │
+  │                                                      │
+  └──────────────── AMENDMENT (cycle repeats) ◄─────────┘
+```
+
+### Status Definitions
+
+| Status | Description | Who's Involved | Next Step |
+|--------|-------------|----------------|-----------|
+| **DRAFT** | Requirements team drafts initial business need | BA, Product, CEO | Collaborative editing until ready |
+| **BRAINSTORM** | Claude session to analyze and structure | BA, CEO, Claude | Iterate until agreement |
+| **SOLIDIFIED** | Final approved structure ready for dev | BA, CEO approve | Claude creates in beads |
+| **IN_DEVELOPMENT** | Implementation started in beads | Developers | Work on epic/features |
+| **COMPLETED** | All features implemented and shipped | - | Close or add amendment |
+| **AMENDMENT** | New addition to existing requirement | BA, CEO, Claude | Back to BRAINSTORM |
+
+### Workflow Steps
+
+#### Step 1: DRAFT - Requirements Team Collaboration
+
+```
+App: Create new ticket
+  Type: REQUIREMENTS (RQ)
+  ID: TSK-RQ-042
+  Title: "Need better authentication"
+  Status: DRAFT
+
+  Description (collaborative editing):
+  ─────────────────────────────────────
+  Customers asking for SSO
+  Maybe OAuth? Not sure...
+  Need "remember me" functionality
+  Security concerns about passwords
+  Some enterprise clients need SAML
+  ─────────────────────────────────────
+
+  Created by: Sarah (BA)
+  Contributors: John (CEO), Mike (Product)
+  Last edited: 2025-12-22
+```
+
+**Actions:**
+- Requirements team adds/edits content freely
+- No structure required yet
+- Capture all ideas, concerns, customer requests
+- When ready: Click "Start Brainstorm" → Status = BRAINSTORM
+
+#### Step 2: BRAINSTORM - Claude Session
+
+```
+BA opens Claude session with requirement:
+
+BA: "Claude, here's requirement TSK-RQ-042. Help us structure this."
+
+Claude reads:
+  ✓ Requirement draft
+  ✓ Current codebase architecture
+  ✓ Existing epics/features
+  ✓ Related dependencies
+
+Claude analyzes:
+  "I see you already have JWT utils in the codebase.
+   For SSO, we have options:
+
+   Option A: Start with JWT (simpler, faster)
+     - Covers signup/signin/remember-me
+     - SAML/OAuth as Phase 2
+     - Estimated: 3 weeks
+
+   Option B: Go straight to OAuth
+     - More future-proof
+     - Requires provider setup
+     - Estimated: 6 weeks
+
+   Recommendation: Option A - JWT first, OAuth later
+
+   Proposed structure:
+   Epic: Authentication & Authorization System
+     Feature 1: User Signup & Signin (JWT)
+       - UC01: Valid signup
+       - UC02: Duplicate email rejection
+       - UC03: Valid signin
+       - UC04: Invalid credentials
+     Feature 2: Remember Me (30-day token)
+     Feature 3: OAuth SSO (Phase 2 - defer)
+     Feature 4: SAML SSO (Phase 2 - defer)
+
+   Questions:
+   1. Start with Option A (JWT)?
+   2. Any specific OAuth providers needed?
+   3. Timeline constraints?"
+
+BA/CEO: "Yes, start with JWT. We need Google OAuth for Phase 2.
+         Timeline: 4 weeks max."
+
+Claude: "Got it. Let me refine based on 4-week timeline..."
+```
+
+**Iteration continues** until everyone agrees.
+
+#### Step 3: SOLIDIFIED - Final Structure
+
+Claude writes final structure in the requirement's `#claude-rewrite-session` section:
+
+```
+Requirement: TSK-RQ-042
+Status: SOLIDIFIED
+
+#original-draft
+─────────────────────────────────────
+Customers asking for SSO
+Maybe OAuth? Not sure...
+Need "remember me" functionality
+Security concerns about passwords
+Some enterprise clients need SAML
+─────────────────────────────────────
+
+#claude-rewrite-session
+─────────────────────────────────────
+Solidified: 2025-12-27
+Participants: Sarah (BA), John (CEO), Claude
+
+Epic: Authentication & Authorization System
+
+Phase 1 (MVP - 4 weeks):
+  Feature 1: User Signup & Signin with JWT
+    Use Cases:
+      - UC01: Valid user signup (email + password)
+      - UC02: Duplicate email rejection (409 error)
+      - UC03: Valid user signin (credentials match)
+      - UC04: Invalid credentials (wrong password/email)
+    Acceptance:
+      - Returns 201 + JWT on signup
+      - Returns 200 + JWT on signin
+      - JWT contains: tenant_id, user_id, role, is_owner
+      - Password hashed with bcrypt (10 rounds)
+
+  Feature 2: Remember Me Token
+    Use Cases:
+      - UC01: User selects "remember me" (30-day token)
+      - UC02: Token refresh before expiration
+      - UC03: Token revocation on logout
+    Acceptance:
+      - Extended JWT expiration (30 days vs 24 hours)
+      - Refresh endpoint available
+      - Secure httpOnly cookie storage
+
+Phase 2 (Future - Post-MVP):
+  Feature 3: OAuth SSO (Google, Microsoft)
+  Feature 4: SAML SSO for Enterprise
+  Feature 5: Two-Factor Authentication (2FA)
+
+Technical Decisions:
+  - JWT (not OAuth) for MVP
+  - bcrypt for password hashing
+  - Token expiration: 24h default, 30d with remember-me
+  - No refresh tokens in Phase 1 (keep simple)
+  - Refresh tokens in Phase 2
+
+Out of Scope (Not doing):
+  - Magic link login (maybe Phase 3)
+  - Biometric authentication
+  - Passwordless login
+
+Dependencies:
+  - Requires: User model, Tenant model (already exists)
+  - Blocks: All user-facing features (everything needs auth)
+
+Timeline:
+  - Week 1: Feature 1 (Signup/Signin)
+  - Week 2-3: Feature 2 (Remember Me)
+  - Week 4: Testing, bug fixes, deployment
+
+Approved by:
+  - John (CEO) - 2025-12-27
+  - Sarah (BA) - 2025-12-27
+
+Ready for implementation: YES
+─────────────────────────────────────
+```
+
+**App updates:**
+- Status: SOLIDIFIED
+- Solidified date: 2025-12-27
+- Approved by: ['john', 'sarah']
+
+#### Step 4: IN_DEVELOPMENT - Claude Creates in Beads
+
+```
+Claude executes in beads session:
+
+# Create Epic
+bd create --title="Authentication & Authorization System" \
+          --type=epic \
+          --priority=0 \
+          --description="Complete auth system with JWT, remember-me, and future SSO support" \
+          --external-ref=TSK-RQ-042
+Result: tsklets-abc123
+
+# Create Feature 1
+bd create --title="User Signup & Signin with JWT" \
+          --type=feature \
+          --priority=0 \
+          --estimate=2400 \
+          --labels=mvp,phase-1,auth \
+          --external-ref=TSK-RQ-042-F1
+Result: tsklets-def456
+bd dep add tsklets-def456 tsklets-abc123
+
+# Create Use Cases
+bd create --title="UC01: Valid user signup" \
+          --type=task \
+          --parent=tsklets-def456 \
+          --labels=use-case,happy-path \
+          --acceptance="Returns 201 + JWT token"
+Result: tsklets-uc001
+
+bd create --title="UC02: Duplicate email rejection" \
+          --type=task \
+          --parent=tsklets-def456 \
+          --labels=use-case,error-case \
+          --acceptance="Returns 409 Conflict error"
+Result: tsklets-uc002
+
+# ... continue for all use cases and features
+```
+
+**App updates:**
+```
+Requirement: TSK-RQ-042
+  Status: IN_DEVELOPMENT
+  Beads Epic: tsklets-abc123
+  Created in beads: 2025-12-27
+
+  Implementation tracking:
+    Epic: tsklets-abc123 (0% complete)
+    Features: 2 created
+    Use Cases: 8 created
+    Tasks: 0 created (pending)
+```
+
+**No bidirectional sync needed!** Claude created everything manually with context.
+
+#### Step 5: AMENDMENT - Future Changes
+
+```
+Time: 2 weeks later
+Situation: Enterprise customer needs SAML NOW (contract requirement)
+
+BA creates amendment:
+  Requirement: TSK-RQ-042
+  Amendment #1: TSK-RQ-042-A001
+
+  Title: "Add SAML SSO for Enterprise (Urgent)"
+  Requested by: Acme Corp (enterprise customer)
+  Business justification: Contract requirement, $500K deal
+  Urgency: HIGH
+
+  Status: AMENDMENT_DRAFT
+  Description:
+  ─────────────────────────────────────
+  Acme Corp (enterprise) needs SAML SSO
+  They use Okta as identity provider
+  Required before Phase 2 OAuth
+  Deadline: 3 weeks from now
+  ─────────────────────────────────────
+
+BA starts Claude session for amendment:
+
+BA: "Claude, we need to add SAML SSO urgently. Check TSK-RQ-042-A001."
+
+Claude reads:
+  ✓ Original requirement (TSK-RQ-042)
+  ✓ Current implementation status (60% complete)
+  ✓ Existing Epic (tsklets-abc123)
+  ✓ Amendment details (SAML urgency)
+
+Claude analyzes:
+  "Current status:
+   - Feature 1 (Signup/Signin): 80% complete
+   - Feature 2 (Remember Me): 40% complete
+
+   Options for SAML:
+
+   Option A: Add to existing Epic (RECOMMENDED)
+     - Fits architecturally
+     - Can reuse JWT infrastructure
+     - Add as Feature 3 (before OAuth)
+     - Estimated: 2 weeks
+
+   Option B: New Epic
+     - Separates SSO concerns
+     - More complex coordination
+     - Estimated: 3 weeks
+
+   Recommendation: Option A
+
+   Proposed addition:
+   Epic: Authentication & Authorization System (tsklets-abc123)
+     Feature 3: SAML SSO for Enterprise (NEW)
+       - UC01: Enterprise user signs in via SAML
+       - UC02: SAML metadata configuration
+       - UC03: User provisioning via SAML
+       - UC04: SAML logout (single sign-out)
+
+   Impact:
+   - Slight delay to OAuth (pushes to later)
+   - No impact on current work (parallel track)
+   - Requires: SAML library (passport-saml or similar)"
+
+BA/CEO: "Approved. Add to existing epic. Prioritize over OAuth."
+
+#claude-rewrite-session (amendment):
+─────────────────────────────────────
+Amendment #1: SAML SSO for Enterprise
+Solidified: 2025-01-15
+Urgency: HIGH (contract requirement)
+
+Add to Epic: tsklets-abc123
+
+Feature 3: SAML SSO for Enterprise
+  Use Cases:
+    - UC01: Enterprise user SAML login via Okta
+    - UC02: Admin configures SAML metadata
+    - UC03: User auto-provisioning via SAML attributes
+    - UC04: Single sign-out (SAML logout)
+
+  Technical:
+    - Library: passport-saml
+    - Provider: Okta (first), generic SAML later
+    - Metadata: Store in database per tenant
+    - Attributes mapping: email, name, role
+
+  Timeline: 2 weeks
+  Priority: Insert before OAuth (was Feature 3)
+
+Updated Phase Plan:
+  Phase 1: Signup/Signin, Remember Me (original)
+  Phase 1.5: SAML SSO (NEW - urgent)
+  Phase 2: OAuth, 2FA (delayed)
+
+Approved by:
+  - John (CEO) - 2025-01-15
+  - Sarah (BA) - 2025-01-15
+─────────────────────────────────────
+
+Claude creates in beads:
+  bd create --title="SAML SSO for Enterprise" \
+            --type=feature \
+            --priority=0 \
+            --labels=enterprise,urgent,saml \
+            --external-ref=TSK-RQ-042-A001
+  Result: tsklets-xyz789
+
+  bd dep add tsklets-xyz789 tsklets-abc123  # Add to existing epic
+
+App updates:
+  Requirement: TSK-RQ-042
+    Status: IN_DEVELOPMENT
+    Amendments: [1]
+
+  Amendment #1: TSK-RQ-042-A001
+    Status: AMENDMENT_SOLIDIFIED
+    Beads Feature: tsklets-xyz789
+    Created: 2025-01-15
+```
+
+### Database Schema (App Side)
+
+```sql
+-- Requirements table
+CREATE TABLE requirements (
+  id VARCHAR PRIMARY KEY,                   -- TSK-RQ-042
+  title VARCHAR NOT NULL,
+  description TEXT,
+  status VARCHAR NOT NULL,                  -- DRAFT, BRAINSTORM, SOLIDIFIED, etc.
+
+  -- Original draft (preserved)
+  original_draft TEXT,
+  original_draft_updated_at TIMESTAMP,
+
+  -- Claude rewrite session output
+  claude_rewrite TEXT,                      -- Final structure
+  claude_rewrite_updated_at TIMESTAMP,
+
+  -- Implementation tracking
+  beads_epic_id VARCHAR,                    -- tsklets-abc123
+  implementation_started_at TIMESTAMP,
+
+  -- Workflow tracking
+  created_by VARCHAR,
+  created_at TIMESTAMP,
+  brainstorm_started_at TIMESTAMP,
+  brainstorm_participants VARCHAR[],        -- ['sarah', 'john', 'claude']
+  solidified_at TIMESTAMP,
+  approved_by VARCHAR[],                    -- ['john', 'sarah']
+  completed_at TIMESTAMP,
+
+  CONSTRAINT valid_status CHECK (status IN (
+    'DRAFT', 'BRAINSTORM', 'SOLIDIFIED',
+    'IN_DEVELOPMENT', 'COMPLETED'
+  ))
+);
+
+-- Amendments table
+CREATE TABLE requirement_amendments (
+  id VARCHAR PRIMARY KEY,                   -- TSK-RQ-042-A001
+  requirement_id VARCHAR REFERENCES requirements(id),
+  amendment_number INT NOT NULL,            -- 1, 2, 3...
+
+  title VARCHAR NOT NULL,
+  description TEXT,
+  business_justification TEXT,
+  urgency VARCHAR,                          -- LOW, MEDIUM, HIGH, CRITICAL
+  requested_by VARCHAR,
+  requested_at TIMESTAMP,
+
+  claude_rewrite TEXT,
+  status VARCHAR NOT NULL,                  -- AMENDMENT_DRAFT, AMENDMENT_BRAINSTORM, AMENDMENT_SOLIDIFIED
+
+  beads_feature_id VARCHAR,                 -- tsklets-xyz789
+  approved_by VARCHAR[],
+  approved_at TIMESTAMP,
+
+  CONSTRAINT valid_amendment_status CHECK (status IN (
+    'AMENDMENT_DRAFT', 'AMENDMENT_BRAINSTORM',
+    'AMENDMENT_SOLIDIFIED', 'AMENDMENT_IN_DEVELOPMENT',
+    'AMENDMENT_COMPLETED'
+  ))
+);
+
+CREATE INDEX idx_requirements_status ON requirements(status);
+CREATE INDEX idx_requirements_beads_epic ON requirements(beads_epic_id);
+CREATE INDEX idx_amendments_requirement ON requirement_amendments(requirement_id);
+CREATE INDEX idx_amendments_status ON requirement_amendments(status);
+```
+
+### Key Principles
+
+#### 1. **No Bidirectional Sync**
+- Requirements stay in App
+- Epics/features created in Beads
+- Link via `external-ref` (one-way reference)
+- No complex sync logic needed
+
+#### 2. **Claude as Bridge**
+- Understands business language
+- Knows codebase architecture
+- Translates between domains
+- Creates technical structure
+
+#### 3. **Preserve History**
+- Original draft never deleted
+- All amendments tracked
+- Full audit trail
+- See evolution over time
+
+#### 4. **Status-Driven Workflow**
+- Clear states for tracking
+- Each status has specific actions
+- Visual progress indicators
+- Easy to query/report
+
+#### 5. **Flexible Amendments**
+- Requirements evolve over time
+- Don't require new requirement ticket
+- Linked to original context
+- Can add features to existing epics
+
+### Integration Points
+
+```
+App (Tsklets)                      Beads (Developer Tool)
+─────────────────────────────────────────────────────────
+
+1. Requirement Created (DRAFT)
+   ↓
+2. Requirement Refined (BRAINSTORM)
+   ↓
+3. Requirement Solidified
+   ↓
+4. Claude creates Epic ──────────→ Epic created (auto-generated ID)
+   external-ref stored                external-ref = TSK-RQ-042
+   ↓
+5. App shows implementation ←────── Beads tracks progress
+   link to beads epic                 Epic → Features → Use Cases → Tasks
+   ↓
+6. Amendment needed
+   ↓
+7. Claude adds Feature ───────────→ Feature added to existing Epic
+   external-ref stored                external-ref = TSK-RQ-042-A001
+   ↓
+8. Requirement completed ←────────── All beads issues closed
+   marked COMPLETED                   Epic status = done
+```
+
+### Example: Full Lifecycle
+
+```
+Day 1: BA creates TSK-RQ-042 (DRAFT)
+  "Need better authentication"
+
+Day 2-3: Team collaborates on draft
+  Adds customer requests, concerns
+
+Day 4: Start brainstorm (BRAINSTORM)
+  BA + Claude session
+  Iterate on structure
+
+Day 5: Finalize structure (SOLIDIFIED)
+  Epic, 2 features, 8 use cases defined
+  Approved by CEO and BA
+
+Day 5 (later): Claude creates in beads (IN_DEVELOPMENT)
+  Epic: tsklets-abc123
+  Features: tsklets-def456, tsklets-ghi789
+  Use Cases: tsklets-uc001 through uc008
+
+Week 2-4: Development proceeds
+  Developers work on tasks
+  Progress visible in app
+
+Week 3: Amendment needed (AMENDMENT)
+  TSK-RQ-042-A001: "Add SAML SSO"
+  Brainstorm → Solidified
+  Claude adds Feature: tsklets-xyz789
+
+Week 6: All features complete (COMPLETED)
+  Epic tsklets-abc123 closed
+  Requirement TSK-RQ-042 marked COMPLETED
+  Amendment TSK-RQ-042-A001 marked COMPLETED
+```
+
+### Benefits
+
+✅ **Clear Separation**: Business (app) vs Technical (beads)
+✅ **No Sync Complexity**: One-way flow, human-in-loop
+✅ **Full Traceability**: Requirements linked to epics
+✅ **Flexibility**: Amendments without new tickets
+✅ **Context Preservation**: Claude knows codebase + business need
+✅ **Audit Trail**: Complete history of decisions
+✅ **Collaboration**: BA/CEO/Claude work together
 
 ## Custom ID Naming Conventions
 
