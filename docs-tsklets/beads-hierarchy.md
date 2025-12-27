@@ -12,11 +12,15 @@ Product: Tsklets (tsklets-*)
     │      │
     │      ├─── Feature (User-facing functionality, 2-4 weeks)
     │      │      │
-    │      │      ├─── Task (Implementation work, 1-5 days)
+    │      │      ├─── Use Case (Specific user scenario - LOGICAL grouping)
     │      │      │      │
-    │      │      │      └─── Subtask (Granular work, hours to 1 day)
-    │      │      │
-    │      │      ├─── Bug (Defects to fix)
+    │      │      │      ├─── Task (Implementation work, 1-5 days)
+    │      │      │      │      │
+    │      │      │      │      └─── Subtask (Granular work, hours to 1 day)
+    │      │      │      │
+    │      │      │      ├─── Task (Test work for use case)
+    │      │      │      │
+    │      │      │      └─── Bug (Use case specific defects)
     │      │      │
     │      │      ├─── Spike (Research/investigation, timeboxed)
     │      │      │
@@ -64,13 +68,57 @@ Product: Tsklets (tsklets-*)
   - "Role-Based Access Control (RBAC) Middleware"
   - "Multi-Tenant Isolation & Tenant Resolution"
 - **Parent**: Epic (via `--parent` or dependency)
-- **Contains**: Tasks, bugs, chores, spikes
+- **Contains**: Use cases (logical grouping), tasks, bugs, chores, spikes
 - **When to use**:
   - Adds new capability users/developers interact with
   - Implements a complete user story
   - Delivers standalone value
 
-### 4. **Task**
+### 4. **Use Case** (LOGICAL Layer - Not a beads type)
+- **Type**: Implemented as `--type=task` with `--parent=<feature-id>` and label `--labels=use-case`
+- **What**: Specific user scenario or interaction flow within a feature
+- **Duration**: 2-5 days (including implementation + testing)
+- **Size**: One complete scenario from start to finish
+- **Priority**: Inherits from parent feature
+- **Examples** (for "User Signup & Signin" feature):
+  - "UC: User signs up with valid email and password"
+  - "UC: User attempts signup with duplicate email (should fail)"
+  - "UC: User signs in with correct credentials"
+  - "UC: User signs in with wrong password (should fail)"
+  - "UC: User signs in with non-existent email (should fail)"
+  - "UC: User session expires and gets 401 error"
+- **Parent**: Feature (via `--parent`)
+- **Contains**:
+  - Implementation tasks (code to make it work)
+  - Test tasks (verify it works)
+  - Bugs (when use case fails)
+- **When to use**:
+  - Feature has multiple distinct user scenarios
+  - Each scenario needs separate implementation and testing
+  - Helps organize acceptance criteria
+  - Enables scenario-driven development (BDD style)
+- **Implementation Pattern**:
+  ```bash
+  # Create use case as a task under feature
+  bd create --title="UC: User signs up with valid credentials" \
+            --type=task \
+            --parent=<feature-id> \
+            --labels=use-case \
+            --priority=0
+
+  # Create implementation task under use case
+  bd create --title="Implement valid signup flow" \
+            --type=task \
+            --parent=<use-case-id>
+
+  # Create test task under use case
+  bd create --title="Test valid signup scenario" \
+            --type=task \
+            --parent=<use-case-id> \
+            --labels=test
+  ```
+
+### 5. **Task**
 - **Type**: `--type=task` (default)
 - **What**: Individual unit of implementation work
 - **Duration**: 1-5 days
@@ -88,7 +136,7 @@ Product: Tsklets (tsklets-*)
   - Can be completed independently
   - Has clear acceptance criteria
 
-### 5. **Subtask**
+### 6. **Subtask**
 - **Type**: `--type=task` with `--parent=<task-id>`
 - **What**: Granular breakdown of a task
 - **Duration**: Hours to 1 day
@@ -104,7 +152,7 @@ Product: Tsklets (tsklets-*)
   - Parallel work by multiple developers
   - Track very granular progress
 
-### 6. **Bug**
+### 7. **Bug**
 - **Type**: `--type=bug`
 - **What**: Defect or incorrect behavior to fix
 - **Duration**: Variable (hours to days)
@@ -122,7 +170,7 @@ Product: Tsklets (tsklets-*)
   - Regression from previous changes
   - Security vulnerabilities
 
-### 7. **Spike**
+### 8. **Spike**
 - **Type**: `--type=task` with label `spike`
 - **What**: Timeboxed research or investigation
 - **Duration**: Fixed timebox (e.g., 2-4 hours)
@@ -138,7 +186,7 @@ Product: Tsklets (tsklets-*)
   - Performance investigation
   - **IMPORTANT**: Always timebox spikes!
 
-### 8. **Chore**
+### 9. **Chore**
 - **Type**: `--type=chore`
 - **What**: Maintenance, refactoring, tech debt that doesn't change behavior
 - **Duration**: Variable
@@ -155,7 +203,7 @@ Product: Tsklets (tsklets-*)
   - Tech debt reduction
   - Developer experience improvements
 
-### 9. **Merge Request**
+### 10. **Merge Request**
 - **Type**: `--type=merge-request`
 - **What**: Code review request (like GitHub PR)
 - **Duration**: Hours (review time)
@@ -168,7 +216,7 @@ Product: Tsklets (tsklets-*)
   - Link PR to task/feature
   - Manage review feedback
 
-### 10. **Molecule**
+### 11. **Molecule**
 - **Type**: `--type=molecule`
 - **What**: Reusable atomic patterns or components
 - **Duration**: N/A (pattern definition)
@@ -231,11 +279,30 @@ Product: Tsklets (tsklets-*)
 │  │
 │  ├─ Feature: User Signup & Signin with JWT [tsklets-cbt]
 │  │  │  (depends on: Password Security & Hashing)
-│  │  ├─ Task: Create User model in Drizzle schema
-│  │  ├─ Task: Implement POST /api/auth/signup
-│  │  ├─ Task: Implement POST /api/auth/signin
-│  │  ├─ Task: Create JWT generation utility
-│  │  ├─ Task: Write integration tests
+│  │  │
+│  │  ├─ Use Case: UC01 - Valid User Signup [tsklets-uc1] (label: use-case)
+│  │  │  ├─ Task: Create User model in Drizzle schema
+│  │  │  ├─ Task: Implement POST /api/auth/signup endpoint
+│  │  │  ├─ Task: Add JWT generation on successful signup
+│  │  │  └─ Task: Test valid signup flow (label: test)
+│  │  │
+│  │  ├─ Use Case: UC02 - Duplicate Email Signup [tsklets-uc2] (label: use-case)
+│  │  │  ├─ Task: Add email uniqueness validation
+│  │  │  ├─ Task: Return 409 Conflict error
+│  │  │  └─ Task: Test duplicate email rejection (label: test)
+│  │  │
+│  │  ├─ Use Case: UC03 - Valid User Signin [tsklets-uc3] (label: use-case)
+│  │  │  ├─ Task: Implement POST /api/auth/signin endpoint
+│  │  │  ├─ Task: Verify password using bcrypt
+│  │  │  ├─ Task: Generate and return JWT token
+│  │  │  └─ Task: Test successful signin flow (label: test)
+│  │  │
+│  │  ├─ Use Case: UC04 - Invalid Credentials Signin [tsklets-uc4] (label: use-case)
+│  │  │  ├─ Task: Handle wrong password scenario
+│  │  │  ├─ Task: Handle non-existent email scenario
+│  │  │  ├─ Task: Return 401 Unauthorized error
+│  │  │  └─ Task: Test invalid credential rejection (label: test)
+│  │  │
 │  │  ├─ Spike: Research JWT expiration best practices
 │  │  └─ Chore: Refactor auth route handlers
 │  │
@@ -282,6 +349,7 @@ Product: Tsklets (tsklets-*)
 ### 1. **Granularity Guidelines**
 - **Epic**: Can you ship pieces independently over months? → Epic
 - **Feature**: Can users/developers see/use this? → Feature
+- **Use Case**: Is this one specific user interaction scenario? → Use Case
 - **Task**: Can one dev finish this in < 1 week? → Task
 - **Subtask**: Is this a few hours of work? → Subtask
 
@@ -290,7 +358,8 @@ Product: Tsklets (tsklets-*)
 | Scenario | Type | Example |
 |----------|------|---------|
 | Major roadmap item | Epic | "Authentication System" |
-| New user capability | Feature | "User Signup" |
+| New user capability | Feature | "User Signup & Signin" |
+| Specific user scenario | Use Case (task + label) | "UC: User signs up with valid email" |
 | Implementation work | Task | "Create signup endpoint" |
 | Very granular work | Subtask | "Add email field to schema" |
 | Something broken | Bug | "Signup fails for Gmail users" |
