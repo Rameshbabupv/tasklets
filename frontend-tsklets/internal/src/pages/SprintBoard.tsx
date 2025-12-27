@@ -19,11 +19,23 @@ interface DevTask {
   title: string
   description: string | null
   type: 'task' | 'bug'
-  status: 'todo' | 'in_progress' | 'review' | 'done'
+  status: 'todo' | 'in_progress' | 'review' | 'blocked' | 'done'
   priority: number
   storyPoints: number | null
   featureId: number
   sprintId: number | null
+  issueKey?: string
+  // New fields
+  estimate?: number | null
+  actualTime?: number | null
+  dueDate?: string | null
+  labels?: string[] | null
+  blockedReason?: string | null
+  // Bug-specific
+  severity?: 'critical' | 'major' | 'minor' | 'trivial' | null
+  environment?: 'production' | 'staging' | 'development' | 'local' | null
+  // Metadata
+  metadata?: Record<string, any> | null
 }
 
 interface Assignment {
@@ -40,9 +52,17 @@ interface BurndownData {
 const columns = [
   { key: 'todo', label: 'To Do', color: 'slate', icon: 'radio_button_unchecked' },
   { key: 'in_progress', label: 'In Progress', color: 'blue', icon: 'pending' },
+  { key: 'blocked', label: 'Blocked', color: 'red', icon: 'block' },
   { key: 'review', label: 'Review', color: 'amber', icon: 'rate_review' },
   { key: 'done', label: 'Done', color: 'emerald', icon: 'check_circle' },
 ]
+
+const severityConfig: Record<string, { label: string; className: string }> = {
+  critical: { label: 'Critical', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+  major: { label: 'Major', className: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
+  minor: { label: 'Minor', className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' },
+  trivial: { label: 'Trivial', className: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300' },
+}
 
 const priorityConfig: Record<number, { label: string; className: string }> = {
   1: { label: 'P1', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
@@ -159,6 +179,7 @@ export default function SprintBoard() {
       amber: 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800',
       emerald: 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800',
       slate: 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700',
+      red: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800',
     }
     return colors[color] || colors.slate
   }
@@ -169,6 +190,7 @@ export default function SprintBoard() {
       amber: 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300',
       emerald: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300',
       slate: 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+      red: 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300',
     }
     return colors[color] || colors.slate
   }
@@ -477,6 +499,13 @@ export default function SprintBoard() {
                               {pConfig.label}
                             </span>
 
+                            {/* Bug severity */}
+                            {task.type === 'bug' && task.severity && (
+                              <span className={`px-2 py-0.5 rounded text-xs font-bold ${severityConfig[task.severity]?.className || ''}`}>
+                                {task.severity}
+                              </span>
+                            )}
+
                             {/* Story Points */}
                             {editingPoints === task.id ? (
                               <div className="flex gap-1">
@@ -510,7 +539,47 @@ export default function SprintBoard() {
                                 {task.storyPoints ? `${task.storyPoints} pts` : '? pts'}
                               </button>
                             )}
+
+                            {/* Estimate */}
+                            {task.estimate && (
+                              <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                                {task.estimate}h
+                              </span>
+                            )}
+
+                            {/* Due date */}
+                            {task.dueDate && (
+                              <span className={`px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1 ${
+                                new Date(task.dueDate) < new Date()
+                                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                  : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                              }`}>
+                                <span className="material-symbols-outlined text-[12px]">event</span>
+                                {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </span>
+                            )}
                           </div>
+
+                          {/* Labels */}
+                          {task.labels && task.labels.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {task.labels.slice(0, 3).map((label) => (
+                                <span key={label} className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
+                                  {label}
+                                </span>
+                              ))}
+                              {task.labels.length > 3 && (
+                                <span className="text-[10px]" style={textMuted}>+{task.labels.length - 3}</span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Blocked reason (if blocked) */}
+                          {task.status === 'blocked' && task.blockedReason && (
+                            <div className="mb-3 p-2 rounded bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                              <p className="text-xs text-red-600 dark:text-red-400 line-clamp-2">{task.blockedReason}</p>
+                            </div>
+                          )}
 
                           {/* Actions */}
                           <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

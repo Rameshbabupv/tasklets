@@ -8,11 +8,23 @@ interface DevTask {
   title: string
   description: string | null
   type: 'task' | 'bug'
-  status: 'todo' | 'in_progress' | 'review' | 'done'
+  status: 'todo' | 'in_progress' | 'review' | 'blocked' | 'done'
   priority: number
   storyPoints: number | null
   featureId: number
   sprintId: number | null
+  issueKey?: string
+  // New fields
+  estimate?: number | null
+  actualTime?: number | null
+  dueDate?: string | null
+  labels?: string[] | null
+  blockedReason?: string | null
+  // Bug-specific
+  severity?: 'critical' | 'major' | 'minor' | 'trivial' | null
+  environment?: 'production' | 'staging' | 'development' | 'local' | null
+  // Metadata
+  metadata?: Record<string, any> | null
 }
 
 interface Sprint {

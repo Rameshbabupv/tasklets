@@ -13,8 +13,16 @@ taskRoutes.use(authenticate)
 // Create task (owner only)
 taskRoutes.post('/', requireInternal, async (req, res) => {
   try {
-    const { tenantId } = req.user!
-    const { featureId, title, description, type, priority, assignees } = req.body
+    const { tenantId, userId } = req.user!
+    const {
+      featureId, title, description, type, priority, assignees,
+      // New fields
+      estimate, dueDate, labels, storyPoints,
+      // Bug-specific
+      severity, environment, reporterId,
+      // Flexible metadata
+      metadata
+    } = req.body
 
     if (!featureId || !title) {
       return res.status(400).json({ error: 'featureId and title are required' })
@@ -44,15 +52,27 @@ taskRoutes.post('/', requireInternal, async (req, res) => {
       type: taskType,
       priority: priority || 3,
       status: 'todo',
+      // New fields
+      createdBy: userId,
+      reporterId: reporterId || (taskType === 'bug' ? userId : null),
+      estimate,
+      dueDate: dueDate ? new Date(dueDate) : null,
+      labels: labels || null,
+      storyPoints,
+      // Bug-specific
+      severity: taskType === 'bug' ? (severity || 'major') : null,
+      environment: taskType === 'bug' ? environment : null,
+      // Flexible metadata
+      metadata: metadata || null,
     }).returning()
 
     // Assign developers if provided
     if (assignees && Array.isArray(assignees) && assignees.length > 0) {
-      for (const userId of assignees) {
+      for (const devUserId of assignees) {
         await db.insert(taskAssignments).values({
           tenantId,
           taskId: task.id,
-          userId,
+          userId: devUserId,
         })
       }
     }
@@ -110,7 +130,15 @@ taskRoutes.get('/by-product/:productId', requireInternal, async (req, res) => {
 taskRoutes.patch('/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { title, description, status, priority, type } = req.body
+    const {
+      title, description, status, priority, type,
+      // New fields
+      estimate, actualTime, dueDate, labels, blockedReason,
+      // Bug-specific
+      severity, environment, reporterId,
+      // Flexible metadata
+      metadata
+    } = req.body
     const { userId, isInternal } = req.user!
 
     const [task] = await db.select().from(devTasks)
@@ -132,14 +160,40 @@ taskRoutes.patch('/:id', async (req, res) => {
       }
     }
 
-    const updateData: any = { updatedAt: new Date().toISOString() }
+    const updateData: any = { updatedAt: new Date() }
     if (title) updateData.title = title
     if (description !== undefined) updateData.description = description
-    if (status) updateData.status = status
+    if (status) {
+      updateData.status = status
+      // Auto-clear blockedReason if moving out of blocked status
+      if (status !== 'blocked' && task.status === 'blocked') {
+        updateData.blockedReason = null
+      }
+    }
     if (priority !== undefined) updateData.priority = priority
     if (type) updateData.type = type
     if (req.body.storyPoints !== undefined) updateData.storyPoints = req.body.storyPoints
     if (req.body.sprintId !== undefined) updateData.sprintId = req.body.sprintId
+
+    // New fields
+    if (estimate !== undefined) updateData.estimate = estimate
+    if (actualTime !== undefined) updateData.actualTime = actualTime
+    if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null
+    if (labels !== undefined) updateData.labels = labels
+    if (blockedReason !== undefined) updateData.blockedReason = blockedReason
+    if (reporterId !== undefined) updateData.reporterId = reporterId
+
+    // Bug-specific
+    if (severity !== undefined) updateData.severity = severity
+    if (environment !== undefined) updateData.environment = environment
+
+    // Flexible metadata (merge with existing)
+    if (metadata !== undefined) {
+      updateData.metadata = metadata === null ? null : {
+        ...(task.metadata as object || {}),
+        ...metadata
+      }
+    }
 
     const [updated] = await db.update(devTasks)
       .set(updateData)
@@ -193,9 +247,9 @@ taskRoutes.post('/:id/assign', requireInternal, async (req, res) => {
 // Spawn task from support ticket (owner only)
 taskRoutes.post('/spawn-from-ticket/:ticketId', requireInternal, async (req, res) => {
   try {
-    const { tenantId } = req.user!
+    const { tenantId, userId } = req.user!
     const { ticketId } = req.params
-    const { featureId, title, description, type } = req.body
+    const { featureId, title, description, type, severity, environment } = req.body
 
     if (!featureId) {
       return res.status(400).json({ error: 'featureId is required' })
@@ -234,7 +288,15 @@ taskRoutes.post('/spawn-from-ticket/:ticketId', requireInternal, async (req, res
       description: description || ticket.description || '',
       type: taskType,
       status: 'todo',
-      priority: 3,
+      priority: ticket.internalPriority || ticket.clientPriority || 3,
+      createdBy: userId,
+      reporterId: ticket.reporterId || ticket.createdBy,
+      severity: taskType === 'bug' ? (severity || 'major') : null,
+      environment: taskType === 'bug' ? (environment || 'production') : null,
+      metadata: {
+        sourceTicketId: parseInt(ticketId),
+        sourceTicketTitle: ticket.title,
+      },
     }).returning()
 
     // Link ticket to task
@@ -338,10 +400,10 @@ taskRoutes.delete('/:id', requireInternal, async (req, res) => {
 taskRoutes.patch('/:id/close', async (req, res) => {
   try {
     const { id } = req.params
-    const { resolution, resolutionNote } = req.body
+    const { resolution, resolutionNote, metadata } = req.body
     const { userId, isInternal } = req.user!
 
-    const validResolutions = ['completed', 'duplicate', 'wont_do', 'moved', 'invalid', 'obsolete']
+    const validResolutions = ['completed', 'duplicate', 'wont_do', 'moved', 'invalid', 'obsolete', 'cannot_reproduce']
     if (!resolution || !validResolutions.includes(resolution)) {
       return res.status(400).json({
         error: 'Valid resolution required',
@@ -368,13 +430,20 @@ taskRoutes.patch('/:id/close', async (req, res) => {
       }
     }
 
+    // Merge metadata if provided (for code stats like linesAdded, linesDeleted)
+    const updatedMetadata = metadata ? {
+      ...(task.metadata as object || {}),
+      ...metadata
+    } : task.metadata
+
     const [updated] = await db.update(devTasks)
       .set({
         status: 'done',
         resolution,
         resolutionNote: resolutionNote || null,
-        closedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        metadata: updatedMetadata,
+        closedAt: new Date(),
+        updatedAt: new Date(),
       })
       .where(eq(devTasks.id, parseInt(id)))
       .returning()

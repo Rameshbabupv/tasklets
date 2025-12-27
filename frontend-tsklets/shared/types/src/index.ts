@@ -83,6 +83,103 @@ export interface TicketComment {
   createdAt: string
 }
 
+// Epic (Development planning)
+export interface Epic {
+  id: number
+  tenantId: number
+  productId: number
+  issueKey?: string
+  title: string
+  description?: string | null
+  status: 'backlog' | 'planned' | 'in_progress' | 'completed' | 'cancelled'
+  priority: number
+  // New fields
+  createdBy?: number | null
+  ownerId?: number | null
+  targetDate?: string | null
+  startDate?: string | null
+  labels?: string[] | null
+  color?: string | null
+  progress?: number | null
+  // Resolution
+  resolution?: string | null
+  resolutionNote?: string | null
+  closedAt?: string | null
+  // Flexible metadata
+  metadata?: Record<string, any> | null
+  createdAt: string
+  updatedAt: string
+}
+
+// Feature (Part of an Epic)
+export interface Feature {
+  id: number
+  tenantId: number
+  epicId: number
+  issueKey?: string
+  title: string
+  description?: string | null
+  status: 'backlog' | 'planned' | 'in_progress' | 'completed' | 'cancelled'
+  priority: number
+  // New fields
+  createdBy?: number | null
+  ownerId?: number | null
+  targetDate?: string | null
+  startDate?: string | null
+  acceptanceCriteria?: string | null
+  labels?: string[] | null
+  estimate?: number | null  // story points
+  // Resolution
+  resolution?: string | null
+  resolutionNote?: string | null
+  closedAt?: string | null
+  // Flexible metadata
+  metadata?: Record<string, any> | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type EpicStatus = 'backlog' | 'planned' | 'in_progress' | 'completed' | 'cancelled'
+export type FeatureStatus = 'backlog' | 'planned' | 'in_progress' | 'completed' | 'cancelled'
+
+// Dev Task
+export interface DevTask {
+  id: number
+  tenantId: number
+  featureId: number
+  issueKey?: string
+  title: string
+  description?: string | null
+  type: 'task' | 'bug'
+  status: 'todo' | 'in_progress' | 'review' | 'blocked' | 'done'
+  priority: number
+  storyPoints?: number | null
+  sprintId?: number | null
+  // New fields
+  createdBy?: number | null
+  reporterId?: number | null
+  estimate?: number | null        // hours
+  actualTime?: number | null      // hours
+  dueDate?: string | null
+  labels?: string[] | null
+  blockedReason?: string | null
+  // Bug-specific
+  severity?: 'critical' | 'major' | 'minor' | 'trivial' | null
+  environment?: 'production' | 'staging' | 'development' | 'local' | null
+  // Resolution
+  resolution?: string | null
+  resolutionNote?: string | null
+  closedAt?: string | null
+  // Flexible metadata
+  metadata?: Record<string, any> | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type TaskSeverity = 'critical' | 'major' | 'minor' | 'trivial'
+export type TaskEnvironment = 'production' | 'staging' | 'development' | 'local'
+export type TaskResolution = 'completed' | 'duplicate' | 'wont_do' | 'moved' | 'invalid' | 'obsolete' | 'cannot_reproduce'
+
 // Auth
 export interface AuthResponse {
   user: User

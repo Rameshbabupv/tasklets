@@ -8,6 +8,28 @@ interface ItemDetail {
   priority?: number
   type?: string
   storyPoints?: number | null
+  issueKey?: string
+  // Task fields
+  estimate?: number | null
+  actualTime?: number | null
+  dueDate?: string | null
+  labels?: string[] | null
+  blockedReason?: string | null
+  // Bug-specific
+  severity?: 'critical' | 'major' | 'minor' | 'trivial' | null
+  environment?: 'production' | 'staging' | 'development' | 'local' | null
+  // Epic/Feature fields
+  targetDate?: string | null
+  startDate?: string | null
+  color?: string | null
+  progress?: number | null
+  acceptanceCriteria?: string | null
+  // Resolution
+  resolution?: string | null
+  resolutionNote?: string | null
+  closedAt?: string | null
+  // Metadata
+  metadata?: Record<string, any> | null
   createdAt?: string
   updatedAt?: string
 }
@@ -30,8 +52,23 @@ const statusColors: Record<string, string> = {
   todo: 'bg-slate-100 text-slate-700',
   in_progress: 'bg-blue-100 text-blue-700',
   review: 'bg-purple-100 text-purple-700',
+  blocked: 'bg-red-100 text-red-700',
   done: 'bg-green-100 text-green-700',
   completed: 'bg-green-100 text-green-700',
+}
+
+const severityColors: Record<string, string> = {
+  critical: 'bg-red-100 text-red-700',
+  major: 'bg-orange-100 text-orange-700',
+  minor: 'bg-yellow-100 text-yellow-700',
+  trivial: 'bg-slate-100 text-slate-600',
+}
+
+const environmentColors: Record<string, string> = {
+  production: 'bg-red-100 text-red-700',
+  staging: 'bg-amber-100 text-amber-700',
+  development: 'bg-blue-100 text-blue-700',
+  local: 'bg-slate-100 text-slate-600',
 }
 
 const typeIcons: Record<string, string> = {
@@ -111,8 +148,38 @@ export default function ItemDetailModal({ item, itemType, onClose }: ItemDetailM
                   {item.storyPoints} pts
                 </span>
               )}
+              {/* Bug-specific badges */}
+              {item.type === 'bug' && item.severity && (
+                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${severityColors[item.severity] || 'bg-slate-100 text-slate-600'}`}>
+                  {item.severity}
+                </span>
+              )}
+              {item.type === 'bug' && item.environment && (
+                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${environmentColors[item.environment] || 'bg-slate-100 text-slate-600'}`}>
+                  {item.environment}
+                </span>
+              )}
+              {/* Labels */}
+              {item.labels && item.labels.length > 0 && item.labels.map((label: string) => (
+                <span key={label} className="px-2.5 py-1 rounded-full text-xs font-semibold bg-violet-100 text-violet-700">
+                  {label}
+                </span>
+              ))}
             </div>
           </div>
+
+          {/* Blocked Reason */}
+          {item.status === 'blocked' && item.blockedReason && (
+            <div className="px-6 pt-4">
+              <div className="p-4 rounded-lg bg-red-50 border border-red-200">
+                <h3 className="text-sm font-semibold mb-2 flex items-center gap-2 text-red-700">
+                  <span className="material-symbols-outlined text-[18px]">block</span>
+                  Blocked
+                </h3>
+                <p className="text-sm text-red-600">{item.blockedReason}</p>
+              </div>
+            </div>
+          )}
 
           {/* Description */}
           <div className="p-6">
@@ -133,6 +200,171 @@ export default function ItemDetailModal({ item, itemType, onClose }: ItemDetailM
               </p>
             )}
           </div>
+
+          {/* Epic/Feature Progress Bar */}
+          {(itemType === 'epic' || itemType === 'feature') && typeof item.progress === 'number' && (
+            <div className="px-6 pb-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Progress</span>
+                <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{item.progress}%</span>
+              </div>
+              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-primary to-blue-500 transition-all duration-500"
+                  style={{ width: `${item.progress}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Epic/Feature Details Grid */}
+          {(itemType === 'epic' || itemType === 'feature') && (item.targetDate || item.startDate || item.resolution) && (
+            <div className="px-6 pb-4">
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+                <span className="material-symbols-outlined text-[18px]">calendar_month</span>
+                Timeline
+              </h3>
+              <div className="grid grid-cols-2 gap-4 p-4 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                {item.startDate && (
+                  <div>
+                    <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Start Date</span>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      {new Date(item.startDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+                {item.targetDate && (
+                  <div>
+                    <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Target Date</span>
+                    <p className={`text-sm font-semibold ${
+                      new Date(item.targetDate) < new Date() && item.status !== 'completed'
+                        ? 'text-red-600'
+                        : ''
+                    }`} style={new Date(item.targetDate) >= new Date() || item.status === 'completed' ? { color: 'var(--text-primary)' } : {}}>
+                      {new Date(item.targetDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+                {item.resolution && (
+                  <div>
+                    <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Resolution</span>
+                    <p className="text-sm font-semibold capitalize" style={{ color: 'var(--text-primary)' }}>
+                      {item.resolution.replace('_', ' ')}
+                    </p>
+                  </div>
+                )}
+                {item.closedAt && (
+                  <div>
+                    <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Closed</span>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      {new Date(item.closedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+              {item.resolutionNote && (
+                <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                  <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Resolution Note</span>
+                  <p className="text-sm mt-1" style={{ color: 'var(--text-primary)' }}>{item.resolutionNote}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Acceptance Criteria (Feature only) */}
+          {itemType === 'feature' && item.acceptanceCriteria && (
+            <div className="px-6 pb-4">
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+                <span className="material-symbols-outlined text-[18px]">checklist</span>
+                Acceptance Criteria
+              </h3>
+              <div className="p-4 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>{item.acceptanceCriteria}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Task Details Grid */}
+          {itemType === 'task' && (item.estimate || item.actualTime || item.dueDate || item.resolution) && (
+            <div className="px-6 pb-4">
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+                <span className="material-symbols-outlined text-[18px]">info</span>
+                Details
+              </h3>
+              <div className="grid grid-cols-2 gap-4 p-4 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                {item.estimate && (
+                  <div>
+                    <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Estimate</span>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{item.estimate}h</p>
+                  </div>
+                )}
+                {item.actualTime && (
+                  <div>
+                    <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Actual Time</span>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{item.actualTime}h</p>
+                  </div>
+                )}
+                {item.dueDate && (
+                  <div>
+                    <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Due Date</span>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      {new Date(item.dueDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+                {item.resolution && (
+                  <div>
+                    <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Resolution</span>
+                    <p className="text-sm font-semibold capitalize" style={{ color: 'var(--text-primary)' }}>
+                      {item.resolution.replace('_', ' ')}
+                    </p>
+                  </div>
+                )}
+              </div>
+              {item.resolutionNote && (
+                <div className="mt-2 p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                  <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Resolution Note</span>
+                  <p className="text-sm mt-1" style={{ color: 'var(--text-primary)' }}>{item.resolutionNote}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Metadata (LOC stats, etc.) */}
+          {item.metadata && Object.keys(item.metadata).length > 0 && (
+            <div className="px-6 pb-4">
+              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+                <span className="material-symbols-outlined text-[18px]">code</span>
+                Metadata
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {item.metadata.linesAdded !== undefined && (
+                  <div className="p-3 rounded-lg bg-green-50 border border-green-200">
+                    <span className="text-xs font-medium text-green-600">Lines Added</span>
+                    <p className="text-lg font-bold text-green-700">+{item.metadata.linesAdded}</p>
+                  </div>
+                )}
+                {item.metadata.linesDeleted !== undefined && (
+                  <div className="p-3 rounded-lg bg-red-50 border border-red-200">
+                    <span className="text-xs font-medium text-red-600">Lines Deleted</span>
+                    <p className="text-lg font-bold text-red-700">-{item.metadata.linesDeleted}</p>
+                  </div>
+                )}
+                {item.metadata.filesChanged !== undefined && (
+                  <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                    <span className="text-xs font-medium text-blue-600">Files Changed</span>
+                    <p className="text-lg font-bold text-blue-700">{item.metadata.filesChanged}</p>
+                  </div>
+                )}
+                {item.metadata.sourceTicketId && (
+                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                    <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Source Ticket</span>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>#{item.metadata.sourceTicketId}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Footer */}
           <div className="px-6 py-4 border-t flex items-center justify-between" style={{ borderColor: 'var(--border-primary)', backgroundColor: 'var(--bg-tertiary)' }}>

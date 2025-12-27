@@ -13,8 +13,12 @@ epicRoutes.use(authenticate)
 // Create epic (owner only)
 epicRoutes.post('/', requireInternal, async (req, res) => {
   try {
-    const { tenantId } = req.user!
-    const { productId, title, description, priority } = req.body
+    const { tenantId, userId } = req.user!
+    const {
+      productId, title, description, priority,
+      // New fields
+      ownerId, targetDate, startDate, labels, color, metadata
+    } = req.body
 
     if (!productId || !title) {
       return res.status(400).json({ error: 'productId and title are required' })
@@ -30,6 +34,15 @@ epicRoutes.post('/', requireInternal, async (req, res) => {
       description,
       priority: priority || 3,
       status: 'backlog',
+      // New fields
+      createdBy: userId,
+      ownerId: ownerId || null,
+      targetDate: targetDate ? new Date(targetDate) : null,
+      startDate: startDate ? new Date(startDate) : null,
+      labels: labels || null,
+      color: color || null,
+      progress: 0,
+      metadata: metadata || null,
     }).returning()
 
     res.status(201).json({ epic })
@@ -63,7 +76,11 @@ epicRoutes.get('/', requireInternal, async (req, res) => {
 epicRoutes.patch('/:id', requireInternal, async (req, res) => {
   try {
     const { id } = req.params
-    const { title, description, status, priority } = req.body
+    const {
+      title, description, status, priority,
+      // New fields
+      ownerId, targetDate, startDate, labels, color, progress, metadata
+    } = req.body
 
     const [epic] = await db.select().from(epics)
       .where(eq(epics.id, parseInt(id)))
@@ -73,11 +90,27 @@ epicRoutes.patch('/:id', requireInternal, async (req, res) => {
       return res.status(404).json({ error: 'Epic not found' })
     }
 
-    const updateData: any = { updatedAt: new Date().toISOString() }
+    const updateData: any = { updatedAt: new Date() }
     if (title) updateData.title = title
     if (description !== undefined) updateData.description = description
     if (status) updateData.status = status
     if (priority !== undefined) updateData.priority = priority
+
+    // New fields
+    if (ownerId !== undefined) updateData.ownerId = ownerId
+    if (targetDate !== undefined) updateData.targetDate = targetDate ? new Date(targetDate) : null
+    if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null
+    if (labels !== undefined) updateData.labels = labels
+    if (color !== undefined) updateData.color = color
+    if (progress !== undefined) updateData.progress = progress
+
+    // Merge metadata
+    if (metadata !== undefined) {
+      updateData.metadata = metadata === null ? null : {
+        ...(epic.metadata as object || {}),
+        ...metadata
+      }
+    }
 
     const [updated] = await db.update(epics)
       .set(updateData)

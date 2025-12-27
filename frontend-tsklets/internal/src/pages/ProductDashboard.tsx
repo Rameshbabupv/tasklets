@@ -7,10 +7,21 @@ import { useAuthStore } from '../store/auth'
 interface Epic {
   id: number
   productId: number
+  issueKey?: string
   title: string
   description: string | null
   status: string
   priority: number
+  // New fields
+  targetDate?: string | null
+  startDate?: string | null
+  labels?: string[] | null
+  color?: string | null
+  progress?: number | null
+  resolution?: string | null
+  resolutionNote?: string | null
+  closedAt?: string | null
+  metadata?: Record<string, any> | null
   createdAt: string
   updatedAt: string
 }
@@ -18,10 +29,21 @@ interface Epic {
 interface Feature {
   id: number
   epicId: number
+  issueKey?: string
   title: string
   description: string | null
   status: string
   priority: number
+  // New fields
+  targetDate?: string | null
+  startDate?: string | null
+  acceptanceCriteria?: string | null
+  labels?: string[] | null
+  estimate?: number | null
+  resolution?: string | null
+  resolutionNote?: string | null
+  closedAt?: string | null
+  metadata?: Record<string, any> | null
   createdAt: string
   updatedAt: string
 }
@@ -29,11 +51,25 @@ interface Feature {
 interface DevTask {
   id: number
   featureId: number
+  issueKey?: string
   title: string
   description: string | null
   type: 'task' | 'bug'
-  status: 'todo' | 'in_progress' | 'review' | 'done'
+  status: 'todo' | 'in_progress' | 'review' | 'blocked' | 'done'
   priority: number
+  storyPoints?: number | null
+  // New fields
+  estimate?: number | null
+  actualTime?: number | null
+  dueDate?: string | null
+  labels?: string[] | null
+  blockedReason?: string | null
+  severity?: 'critical' | 'major' | 'minor' | 'trivial' | null
+  environment?: 'production' | 'staging' | 'development' | 'local' | null
+  resolution?: string | null
+  resolutionNote?: string | null
+  closedAt?: string | null
+  metadata?: Record<string, any> | null
   createdAt: string
   updatedAt: string
 }
@@ -88,16 +124,32 @@ export default function ProductDashboard() {
   const [epicTitle, setEpicTitle] = useState('')
   const [epicDescription, setEpicDescription] = useState('')
   const [epicPriority, setEpicPriority] = useState(3)
+  // New epic fields
+  const [epicTargetDate, setEpicTargetDate] = useState('')
+  const [epicLabels, setEpicLabels] = useState('')
+  const [epicColor, setEpicColor] = useState('')
 
   const [featureTitle, setFeatureTitle] = useState('')
   const [featureDescription, setFeatureDescription] = useState('')
   const [featurePriority, setFeaturePriority] = useState(3)
+  // New feature fields
+  const [featureTargetDate, setFeatureTargetDate] = useState('')
+  const [featureLabels, setFeatureLabels] = useState('')
+  const [featureAcceptanceCriteria, setFeatureAcceptanceCriteria] = useState('')
+  const [featureEstimate, setFeatureEstimate] = useState<number | ''>('')
 
   const [taskTitle, setTaskTitle] = useState('')
   const [taskDescription, setTaskDescription] = useState('')
   const [taskType, setTaskType] = useState<'task' | 'bug'>('task')
   const [taskPriority, setTaskPriority] = useState(3)
   const [selectedDevelopers, setSelectedDevelopers] = useState<number[]>([])
+  // New task fields
+  const [taskEstimate, setTaskEstimate] = useState<number | ''>('')
+  const [taskDueDate, setTaskDueDate] = useState('')
+  const [taskLabels, setTaskLabels] = useState('')
+  // Bug-specific fields
+  const [taskSeverity, setTaskSeverity] = useState<'critical' | 'major' | 'minor' | 'trivial'>('major')
+  const [taskEnvironment, setTaskEnvironment] = useState<'production' | 'staging' | 'development' | 'local'>('production')
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -143,6 +195,11 @@ export default function ProductDashboard() {
     setError('')
     setSaving(true)
 
+    // Parse labels from comma-separated string
+    const labelsArray = epicLabels.trim()
+      ? epicLabels.split(',').map(l => l.trim()).filter(Boolean)
+      : undefined
+
     try {
       const res = await fetch('/api/epics', {
         method: 'POST',
@@ -155,6 +212,10 @@ export default function ProductDashboard() {
           title: epicTitle,
           description: epicDescription,
           priority: epicPriority,
+          // New fields
+          targetDate: epicTargetDate || undefined,
+          labels: labelsArray,
+          color: epicColor || undefined,
         }),
       })
 
@@ -164,6 +225,9 @@ export default function ProductDashboard() {
       setEpicTitle('')
       setEpicDescription('')
       setEpicPriority(3)
+      setEpicTargetDate('')
+      setEpicLabels('')
+      setEpicColor('')
       fetchDashboard()
     } catch (err: any) {
       setError(err.message)
@@ -178,6 +242,11 @@ export default function ProductDashboard() {
     setError('')
     setSaving(true)
 
+    // Parse labels from comma-separated string
+    const labelsArray = featureLabels.trim()
+      ? featureLabels.split(',').map(l => l.trim()).filter(Boolean)
+      : undefined
+
     try {
       const res = await fetch('/api/features', {
         method: 'POST',
@@ -190,6 +259,11 @@ export default function ProductDashboard() {
           title: featureTitle,
           description: featureDescription,
           priority: featurePriority,
+          // New fields
+          targetDate: featureTargetDate || undefined,
+          labels: labelsArray,
+          acceptanceCriteria: featureAcceptanceCriteria || undefined,
+          estimate: featureEstimate || undefined,
         }),
       })
 
@@ -199,6 +273,10 @@ export default function ProductDashboard() {
       setFeatureTitle('')
       setFeatureDescription('')
       setFeaturePriority(3)
+      setFeatureTargetDate('')
+      setFeatureLabels('')
+      setFeatureAcceptanceCriteria('')
+      setFeatureEstimate('')
       setSelectedEpicId(null)
       fetchDashboard()
     } catch (err: any) {
@@ -214,6 +292,11 @@ export default function ProductDashboard() {
     setError('')
     setSaving(true)
 
+    // Parse labels from comma-separated string
+    const labelsArray = taskLabels.trim()
+      ? taskLabels.split(',').map(l => l.trim()).filter(Boolean)
+      : undefined
+
     try {
       const res = await fetch('/api/tasks', {
         method: 'POST',
@@ -228,6 +311,15 @@ export default function ProductDashboard() {
           type: taskType,
           priority: taskPriority,
           assignees: selectedDevelopers,
+          // New fields
+          estimate: taskEstimate || undefined,
+          dueDate: taskDueDate || undefined,
+          labels: labelsArray,
+          // Bug-specific
+          ...(taskType === 'bug' && {
+            severity: taskSeverity,
+            environment: taskEnvironment,
+          }),
         }),
       })
 
@@ -239,6 +331,11 @@ export default function ProductDashboard() {
       setTaskType('task')
       setTaskPriority(3)
       setSelectedDevelopers([])
+      setTaskEstimate('')
+      setTaskDueDate('')
+      setTaskLabels('')
+      setTaskSeverity('major')
+      setTaskEnvironment('production')
       setSelectedFeatureId(null)
       fetchDashboard()
     } catch (err: any) {
@@ -679,8 +776,8 @@ export default function ProductDashboard() {
       {/* Create Epic Modal */}
       {showEpicModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
-            <div className="p-6 border-b border-slate-200">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200 sticky top-0 bg-white">
               <h3 className="text-lg font-bold text-slate-900">Create New Epic</h3>
               <p className="text-sm text-slate-500 mt-1">Add a new epic to this product</p>
             </div>
@@ -709,28 +806,81 @@ export default function ProductDashboard() {
                   onChange={(e) => setEpicDescription(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 resize-none"
                   rows={3}
-                  placeholder="Brief description"
+                  placeholder="Brief description of the epic's scope and goals..."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Priority</label>
+                  <select
+                    value={epicPriority}
+                    onChange={(e) => setEpicPriority(parseInt(e.target.value))}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option value={1}>P1 - Critical</option>
+                    <option value={2}>P2 - High</option>
+                    <option value={3}>P3 - Medium</option>
+                    <option value={4}>P4 - Low</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Target Date</label>
+                  <input
+                    type="date"
+                    value={epicTargetDate}
+                    onChange={(e) => setEpicTargetDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Labels</label>
+                <input
+                  type="text"
+                  value={epicLabels}
+                  onChange={(e) => setEpicLabels(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
+                  placeholder="q1-2025, mvp, core (comma-separated)"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Priority</label>
-                <select
-                  value={epicPriority}
-                  onChange={(e) => setEpicPriority(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value={1}>P1 - Critical</option>
-                  <option value={2}>P2 - High</option>
-                  <option value={3}>P3 - Medium</option>
-                  <option value={4}>P4 - Low</option>
-                </select>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Color (for roadmap)</label>
+                <div className="flex gap-2">
+                  {['#3B82F6', '#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#EF4444'].map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setEpicColor(color)}
+                      className={`w-8 h-8 rounded-lg transition-transform ${epicColor === color ? 'ring-2 ring-offset-2 ring-slate-400 scale-110' : 'hover:scale-105'}`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                  {epicColor && (
+                    <button
+                      type="button"
+                      onClick={() => setEpicColor('')}
+                      className="px-2 py-1 text-xs text-slate-500 hover:text-slate-700"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
                 <button
                   type="button"
-                  onClick={() => { setShowEpicModal(false); setError('') }}
+                  onClick={() => {
+                    setShowEpicModal(false)
+                    setEpicTargetDate('')
+                    setEpicLabels('')
+                    setEpicColor('')
+                    setError('')
+                  }}
                   className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg text-sm font-medium"
                 >
                   Cancel
@@ -738,7 +888,7 @@ export default function ProductDashboard() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-4 py-2 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50"
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold disabled:opacity-50"
                 >
                   {saving ? 'Creating...' : 'Create Epic'}
                 </button>
@@ -751,8 +901,8 @@ export default function ProductDashboard() {
       {/* Create Feature Modal */}
       {showFeatureModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
-            <div className="p-6 border-b border-slate-200">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200 sticky top-0 bg-white">
               <h3 className="text-lg font-bold text-slate-900">Create New Feature</h3>
               <p className="text-sm text-slate-500 mt-1">Add a feature to the selected epic</p>
             </div>
@@ -781,28 +931,84 @@ export default function ProductDashboard() {
                   onChange={(e) => setFeatureDescription(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 resize-none"
                   rows={3}
-                  placeholder="Brief description"
+                  placeholder="Brief description of the feature..."
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Priority</label>
+                  <select
+                    value={featurePriority}
+                    onChange={(e) => setFeaturePriority(parseInt(e.target.value))}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option value={1}>P1 - Critical</option>
+                    <option value={2}>P2 - High</option>
+                    <option value={3}>P3 - Medium</option>
+                    <option value={4}>P4 - Low</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Target Date</label>
+                  <input
+                    type="date"
+                    value={featureTargetDate}
+                    onChange={(e) => setFeatureTargetDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Estimate (story points)</label>
+                  <input
+                    type="number"
+                    value={featureEstimate}
+                    onChange={(e) => setFeatureEstimate(e.target.value ? parseInt(e.target.value) : '')}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
+                    placeholder="e.g., 13"
+                    min={1}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Labels</label>
+                  <input
+                    type="text"
+                    value={featureLabels}
+                    onChange={(e) => setFeatureLabels(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
+                    placeholder="frontend, api"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Priority</label>
-                <select
-                  value={featurePriority}
-                  onChange={(e) => setFeaturePriority(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value={1}>P1 - Critical</option>
-                  <option value={2}>P2 - High</option>
-                  <option value={3}>P3 - Medium</option>
-                  <option value={4}>P4 - Low</option>
-                </select>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Acceptance Criteria</label>
+                <textarea
+                  value={featureAcceptanceCriteria}
+                  onChange={(e) => setFeatureAcceptanceCriteria(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 resize-none"
+                  rows={4}
+                  placeholder="- Users can sign in with Google&#10;- Users can sign in with GitHub&#10;- Session persists across page refreshes"
+                />
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
                 <button
                   type="button"
-                  onClick={() => { setShowFeatureModal(false); setSelectedEpicId(null); setError('') }}
+                  onClick={() => {
+                    setShowFeatureModal(false)
+                    setSelectedEpicId(null)
+                    setFeatureTargetDate('')
+                    setFeatureLabels('')
+                    setFeatureAcceptanceCriteria('')
+                    setFeatureEstimate('')
+                    setError('')
+                  }}
                   className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg text-sm font-medium"
                 >
                   Cancel
@@ -810,7 +1016,7 @@ export default function ProductDashboard() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-4 py-2 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50"
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50"
                 >
                   {saving ? 'Creating...' : 'Create Feature'}
                 </button>
@@ -832,10 +1038,10 @@ export default function ProductDashboard() {
       {/* Create Task Modal */}
       {showTaskModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
-            <div className="p-6 border-b border-slate-200">
-              <h3 className="text-lg font-bold text-slate-900">Create New Task</h3>
-              <p className="text-sm text-slate-500 mt-1">Add a task to the selected feature</p>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200 sticky top-0 bg-white">
+              <h3 className="text-lg font-bold text-slate-900">Create New {taskType === 'bug' ? 'Bug' : 'Task'}</h3>
+              <p className="text-sm text-slate-500 mt-1">Add a {taskType} to the selected feature</p>
             </div>
 
             <form onSubmit={createTask} className="p-6 space-y-4">
@@ -850,7 +1056,7 @@ export default function ProductDashboard() {
                   value={taskTitle}
                   onChange={(e) => setTaskTitle(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
-                  placeholder="e.g., Implement Google OAuth"
+                  placeholder={taskType === 'bug' ? "e.g., Login fails on mobile Safari" : "e.g., Implement Google OAuth"}
                   required
                 />
               </div>
@@ -861,8 +1067,8 @@ export default function ProductDashboard() {
                   value={taskDescription}
                   onChange={(e) => setTaskDescription(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 resize-none"
-                  rows={2}
-                  placeholder="Brief description"
+                  rows={3}
+                  placeholder={taskType === 'bug' ? "Steps to reproduce, expected vs actual behavior..." : "Brief description of the task..."}
                 />
               </div>
 
@@ -886,17 +1092,85 @@ export default function ProductDashboard() {
                     onChange={(e) => setTaskPriority(parseInt(e.target.value))}
                     className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
                   >
-                    <option value={1}>P1</option>
-                    <option value={2}>P2</option>
-                    <option value={3}>P3</option>
-                    <option value={4}>P4</option>
+                    <option value={1}>P1 - Critical</option>
+                    <option value={2}>P2 - High</option>
+                    <option value={3}>P3 - Medium</option>
+                    <option value={4}>P4 - Low</option>
                   </select>
                 </div>
               </div>
 
+              {/* Bug-specific fields */}
+              {taskType === 'bug' && (
+                <div className="grid grid-cols-2 gap-3 p-3 bg-red-50 border border-red-100 rounded-lg">
+                  <div>
+                    <label className="block text-sm font-medium text-red-700 mb-1">Severity</label>
+                    <select
+                      value={taskSeverity}
+                      onChange={(e) => setTaskSeverity(e.target.value as any)}
+                      className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:ring-2 focus:ring-red-200 bg-white"
+                    >
+                      <option value="critical">Critical</option>
+                      <option value="major">Major</option>
+                      <option value="minor">Minor</option>
+                      <option value="trivial">Trivial</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-red-700 mb-1">Environment</label>
+                    <select
+                      value={taskEnvironment}
+                      onChange={(e) => setTaskEnvironment(e.target.value as any)}
+                      className="w-full px-3 py-2 border border-red-200 rounded-lg text-sm focus:ring-2 focus:ring-red-200 bg-white"
+                    >
+                      <option value="production">Production</option>
+                      <option value="staging">Staging</option>
+                      <option value="development">Development</option>
+                      <option value="local">Local</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Estimate (hours)</label>
+                  <input
+                    type="number"
+                    value={taskEstimate}
+                    onChange={(e) => setTaskEstimate(e.target.value ? parseInt(e.target.value) : '')}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
+                    placeholder="e.g., 4"
+                    min={1}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Due Date</label>
+                  <input
+                    type="date"
+                    value={taskDueDate}
+                    onChange={(e) => setTaskDueDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Labels</label>
+                <input
+                  type="text"
+                  value={taskLabels}
+                  onChange={(e) => setTaskLabels(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
+                  placeholder="frontend, api, urgent (comma-separated)"
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Assign Developers</label>
-                <div className="space-y-2 max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-3">
+                <div className="space-y-2 max-h-32 overflow-y-auto border border-slate-200 rounded-lg p-3">
                   {developers.map((dev) => (
                     <label key={dev.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-50 p-2 rounded">
                       <input
@@ -922,6 +1196,11 @@ export default function ProductDashboard() {
                     setShowTaskModal(false)
                     setSelectedFeatureId(null)
                     setSelectedDevelopers([])
+                    setTaskEstimate('')
+                    setTaskDueDate('')
+                    setTaskLabels('')
+                    setTaskSeverity('major')
+                    setTaskEnvironment('production')
                     setError('')
                   }}
                   className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg text-sm font-medium"
@@ -931,9 +1210,13 @@ export default function ProductDashboard() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-4 py-2 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50"
+                  className={`px-4 py-2 text-white rounded-lg text-sm font-semibold disabled:opacity-50 ${
+                    taskType === 'bug'
+                      ? 'bg-red-500 hover:bg-red-600'
+                      : 'bg-primary hover:bg-blue-600'
+                  }`}
                 >
-                  {saving ? 'Creating...' : 'Create Task'}
+                  {saving ? 'Creating...' : `Create ${taskType === 'bug' ? 'Bug' : 'Task'}`}
                 </button>
               </div>
             </form>

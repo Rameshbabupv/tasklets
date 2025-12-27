@@ -13,8 +13,12 @@ featureRoutes.use(authenticate)
 // Create feature (owner only)
 featureRoutes.post('/', requireInternal, async (req, res) => {
   try {
-    const { tenantId } = req.user!
-    const { epicId, title, description, priority } = req.body
+    const { tenantId, userId } = req.user!
+    const {
+      epicId, title, description, priority,
+      // New fields
+      ownerId, targetDate, startDate, acceptanceCriteria, labels, estimate, metadata
+    } = req.body
 
     if (!epicId || !title) {
       return res.status(400).json({ error: 'epicId and title are required' })
@@ -37,6 +41,15 @@ featureRoutes.post('/', requireInternal, async (req, res) => {
       description,
       priority: priority || 3,
       status: 'backlog',
+      // New fields
+      createdBy: userId,
+      ownerId: ownerId || null,
+      targetDate: targetDate ? new Date(targetDate) : null,
+      startDate: startDate ? new Date(startDate) : null,
+      acceptanceCriteria: acceptanceCriteria || null,
+      labels: labels || null,
+      estimate: estimate || null,
+      metadata: metadata || null,
     }).returning()
 
     res.status(201).json({ feature })
@@ -70,7 +83,11 @@ featureRoutes.get('/', requireInternal, async (req, res) => {
 featureRoutes.patch('/:id', requireInternal, async (req, res) => {
   try {
     const { id } = req.params
-    const { title, description, status, priority } = req.body
+    const {
+      title, description, status, priority,
+      // New fields
+      ownerId, targetDate, startDate, acceptanceCriteria, labels, estimate, metadata
+    } = req.body
 
     const [feature] = await db.select().from(features)
       .where(eq(features.id, parseInt(id)))
@@ -80,11 +97,27 @@ featureRoutes.patch('/:id', requireInternal, async (req, res) => {
       return res.status(404).json({ error: 'Feature not found' })
     }
 
-    const updateData: any = { updatedAt: new Date().toISOString() }
+    const updateData: any = { updatedAt: new Date() }
     if (title) updateData.title = title
     if (description !== undefined) updateData.description = description
     if (status) updateData.status = status
     if (priority !== undefined) updateData.priority = priority
+
+    // New fields
+    if (ownerId !== undefined) updateData.ownerId = ownerId
+    if (targetDate !== undefined) updateData.targetDate = targetDate ? new Date(targetDate) : null
+    if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null
+    if (acceptanceCriteria !== undefined) updateData.acceptanceCriteria = acceptanceCriteria
+    if (labels !== undefined) updateData.labels = labels
+    if (estimate !== undefined) updateData.estimate = estimate
+
+    // Merge metadata
+    if (metadata !== undefined) {
+      updateData.metadata = metadata === null ? null : {
+        ...(feature.metadata as object || {}),
+        ...metadata
+      }
+    }
 
     const [updated] = await db.update(features)
       .set(updateData)
