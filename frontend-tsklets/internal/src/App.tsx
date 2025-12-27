@@ -18,6 +18,8 @@ import Backlog from './pages/Backlog'
 import SprintRetro from './pages/SprintRetro'
 import ExecutiveDashboard from './pages/ExecutiveDashboard'
 import Roadmap from './pages/Roadmap'
+import Requirements from './pages/Requirements'
+import RequirementDetail from './pages/RequirementDetail'
 import DevUserSwitcher from './components/DevUserSwitcher'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -73,6 +75,8 @@ export default function App() {
         <Route path="/backlog" element={<PrivateRoute><Backlog /></PrivateRoute>} />
         <Route path="/ideas" element={<PrivateRoute><Ideas /></PrivateRoute>} />
         <Route path="/ideas/:id" element={<PrivateRoute><IdeaDetail /></PrivateRoute>} />
+        <Route path="/requirements" element={<PrivateRoute><Requirements /></PrivateRoute>} />
+        <Route path="/requirements/:id" element={<PrivateRoute><RequirementDetail /></PrivateRoute>} />
       </Routes>
       <DevUserSwitcher />
     </BrowserRouter>

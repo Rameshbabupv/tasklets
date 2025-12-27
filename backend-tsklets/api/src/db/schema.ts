@@ -69,12 +69,12 @@ export const products = pgTable('products', {
   createdAt: timestamp('created_at').defaultNow(),
 })
 
-// Per-type sequence counters for issue keys (E001, F001, T001, B001)
+// Per-type sequence counters for issue keys (E001, F001, T001, B001, R001)
 export const productSequences = pgTable('product_sequences', {
   id: serial('id').primaryKey(),
   productId: integer('product_id').references(() => products.id).notNull(),
   issueType: text('issue_type', {
-    enum: ['E', 'F', 'T', 'B', 'S', 'N'] // Epic, Feature, Task, Bug, Spike, Note
+    enum: ['E', 'F', 'T', 'B', 'S', 'N', 'R'] // Epic, Feature, Task, Bug, Spike, Note, Requirement
   }).notNull(),
   nextNum: integer('next_num').default(1).notNull(),
   createdAt: timestamp('created_at').defaultNow(),
@@ -417,6 +417,83 @@ export const ideaTickets = pgTable('idea_tickets', {
   ticketId: integer('ticket_id').references(() => tickets.id).notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 })
+
+// ========================================
+// REQUIREMENTS (Internal planning workflow)
+// ========================================
+
+// Requirement (CEO/BA creates, brainstorms with Claude, links to beads epic)
+export const requirements = pgTable('requirements', {
+  id: serial('id').primaryKey(),
+  tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
+  productId: integer('product_id').references(() => products.id).notNull(),
+  issueKey: text('issue_key').unique(), // e.g., 'TSKLTS-R001'
+  beadsId: text('beads_id'), // Link to beads CLI issue
+  title: text('title').notNull(),
+  description: text('description'),
+  status: text('status', {
+    enum: ['draft', 'brainstorm', 'solidified', 'approved', 'in_development', 'implemented', 'cancelled']
+  }).default('draft'),
+  priority: integer('priority').default(3),
+  // Content preservation
+  originalDraft: text('original_draft'), // Preserved first draft
+  claudeRewrite: text('claude_rewrite'), // Claude's structured version
+  // Implementation tracking
+  beadsEpicId: text('beads_epic_id'), // Link to created epic in beads
+  // Ownership
+  createdBy: integer('created_by').references(() => users.id),
+  ownerId: integer('owner_id').references(() => users.id),
+  // Collaboration
+  brainstormParticipants: text('brainstorm_participants').array(), // User IDs as strings
+  approvedBy: text('approved_by').array(), // User IDs as strings
+  // Planning
+  targetDate: timestamp('target_date'),
+  labels: text('labels').array(),
+  color: text('color'),
+  // Workflow timestamps
+  brainstormStartedAt: timestamp('brainstorm_started_at'),
+  solidifiedAt: timestamp('solidified_at'),
+  implementationStartedAt: timestamp('implementation_started_at'),
+  completedAt: timestamp('completed_at'),
+  // Dynamic fields
+  metadata: jsonb('metadata'),
+  // Resolution
+  resolution: text('resolution', {
+    enum: ['completed', 'duplicate', 'wont_do', 'moved', 'invalid', 'obsolete']
+  }),
+  resolutionNote: text('resolution_note'),
+  closedAt: timestamp('closed_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// Requirement Amendment (evolving requirements without creating new requirement)
+export const requirementAmendments = pgTable('requirement_amendments', {
+  id: serial('id').primaryKey(),
+  tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
+  requirementId: integer('requirement_id').references(() => requirements.id).notNull(),
+  amendmentNumber: integer('amendment_number').notNull(), // 1, 2, 3...
+  title: text('title').notNull(),
+  description: text('description'),
+  businessJustification: text('business_justification'),
+  urgency: text('urgency', {
+    enum: ['critical', 'high', 'medium', 'low']
+  }).default('medium'),
+  status: text('status', {
+    enum: ['amendment_draft', 'amendment_brainstorm', 'amendment_solidified', 'amendment_in_development', 'amendment_completed']
+  }).default('amendment_draft'),
+  // Implementation tracking
+  beadsFeatureId: text('beads_feature_id'), // Link to created feature in beads
+  // Approval
+  approvedBy: text('approved_by').array(),
+  approvedAt: timestamp('approved_at'),
+  // Ownership
+  requestedBy: integer('requested_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => ({
+  uniqueAmendmentNumber: unique().on(table.requirementId, table.amendmentNumber),
+}))
 
 // ========================================
 // RELATIONS
@@ -777,6 +854,41 @@ export const ticketCommentsRelations = relations(ticketComments, ({ one }) => ({
   }),
   user: one(users, {
     fields: [ticketComments.userId],
+    references: [users.id],
+  }),
+}))
+
+export const requirementsRelations = relations(requirements, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [requirements.tenantId],
+    references: [tenants.id],
+  }),
+  product: one(products, {
+    fields: [requirements.productId],
+    references: [products.id],
+  }),
+  creator: one(users, {
+    fields: [requirements.createdBy],
+    references: [users.id],
+  }),
+  owner: one(users, {
+    fields: [requirements.ownerId],
+    references: [users.id],
+  }),
+  amendments: many(requirementAmendments),
+}))
+
+export const requirementAmendmentsRelations = relations(requirementAmendments, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [requirementAmendments.tenantId],
+    references: [tenants.id],
+  }),
+  requirement: one(requirements, {
+    fields: [requirementAmendments.requirementId],
+    references: [requirements.id],
+  }),
+  requester: one(users, {
+    fields: [requirementAmendments.requestedBy],
     references: [users.id],
   }),
 }))

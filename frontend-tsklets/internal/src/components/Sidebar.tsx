@@ -8,6 +8,7 @@ const navItems = [
   { path: '/dashboard', emoji: '📊', icon: 'dashboard', label: 'Dashboard', roles: ['admin', 'support', 'integrator', 'ceo', 'developer'] },
   { path: '/executive', emoji: '🎯', icon: 'monitoring', label: 'Executive', roles: ['ceo', 'admin'] },
   { path: '/roadmap', emoji: '🗺️', icon: 'map', label: 'Roadmap', roles: ['ceo', 'admin'] },
+  { path: '/requirements', emoji: '📝', icon: 'description', label: 'Requirements', roles: ['admin', 'ceo', 'support'] },
   { path: '/my-tasks', emoji: '✅', icon: 'task_alt', label: 'My Tasks', roles: ['developer'] },
   { path: '/sprints', emoji: '🏃', icon: 'sprint', label: 'Sprints', roles: ['admin', 'ceo', 'developer'] },
   { path: '/backlog', emoji: '📋', icon: 'list', label: 'Backlog', roles: ['admin', 'ceo', 'developer'] },

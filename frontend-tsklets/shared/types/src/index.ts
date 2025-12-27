@@ -142,6 +142,85 @@ export interface Feature {
 export type EpicStatus = 'backlog' | 'planned' | 'in_progress' | 'completed' | 'cancelled'
 export type FeatureStatus = 'backlog' | 'planned' | 'in_progress' | 'completed' | 'cancelled'
 
+// Requirement (Internal planning workflow)
+export interface Requirement {
+  id: number
+  tenantId: number
+  productId: number
+  issueKey?: string
+  beadsId?: string | null
+  title: string
+  description?: string | null
+  status: RequirementStatus
+  priority: number
+  // Content preservation
+  originalDraft?: string | null
+  claudeRewrite?: string | null
+  // Implementation tracking
+  beadsEpicId?: string | null
+  // Ownership
+  createdBy?: number | null
+  ownerId?: number | null
+  // Collaboration
+  brainstormParticipants?: string[] | null
+  approvedBy?: string[] | null
+  // Planning
+  targetDate?: string | null
+  labels?: string[] | null
+  color?: string | null
+  // Workflow timestamps
+  brainstormStartedAt?: string | null
+  solidifiedAt?: string | null
+  implementationStartedAt?: string | null
+  completedAt?: string | null
+  // Resolution
+  resolution?: string | null
+  resolutionNote?: string | null
+  closedAt?: string | null
+  // Flexible metadata
+  metadata?: Record<string, any> | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type RequirementStatus =
+  | 'draft'
+  | 'brainstorm'
+  | 'solidified'
+  | 'approved'
+  | 'in_development'
+  | 'implemented'
+  | 'cancelled'
+
+// Requirement Amendment
+export interface RequirementAmendment {
+  id: number
+  tenantId: number
+  requirementId: number
+  amendmentNumber: number
+  title: string
+  description?: string | null
+  businessJustification?: string | null
+  urgency: 'critical' | 'high' | 'medium' | 'low'
+  status: AmendmentStatus
+  // Implementation tracking
+  beadsFeatureId?: string | null
+  // Approval
+  approvedBy?: string[] | null
+  approvedAt?: string | null
+  // Ownership
+  requestedBy?: number | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type AmendmentStatus =
+  | 'amendment_draft'
+  | 'amendment_brainstorm'
+  | 'amendment_solidified'
+  | 'amendment_in_development'
+  | 'amendment_completed'
+
 // Dev Task
 export interface DevTask {
   id: number

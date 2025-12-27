@@ -2,10 +2,10 @@ import { db } from '../db/index.js'
 import { products, productSequences } from '../db/schema.js'
 import { eq, and, sql } from 'drizzle-orm'
 
-export type IssueType = 'E' | 'F' | 'T' | 'B' | 'S' | 'N'
+export type IssueType = 'E' | 'F' | 'T' | 'B' | 'S' | 'N' | 'R'
 
 /**
- * Generate a new issue key with type prefix (e.g., TSKLTS-E001, CSUP-T042)
+ * Generate a new issue key with type prefix (e.g., TSKLTS-E001, CSUP-T042, TSKLTS-R001)
  * Uses per-product, per-type sequence counters
  */
 export async function generateIssueKey(
