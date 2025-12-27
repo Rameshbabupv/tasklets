@@ -23,10 +23,10 @@ const columns = [
 ]
 
 const priorityConfig: Record<number, { label: string; className: string }> = {
-  1: { label: 'P1', className: 'bg-red-100 text-red-700 border-red-200' },
-  2: { label: 'P2', className: 'bg-amber-100 text-amber-700 border-amber-200' },
-  3: { label: 'P3', className: 'bg-blue-100 text-blue-700 border-blue-200' },
-  4: { label: 'P4', className: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+  1: { label: 'P1', className: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800' },
+  2: { label: 'P2', className: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800' },
+  3: { label: 'P3', className: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800' },
+  4: { label: 'P4', className: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800' },
 }
 
 export default function MyTasks() {
@@ -73,19 +73,19 @@ export default function MyTasks() {
 
   const getColumnColor = (color: string) => {
     switch (color) {
-      case 'blue': return 'bg-blue-50 border-blue-200'
-      case 'amber': return 'bg-amber-50 border-amber-200'
-      case 'emerald': return 'bg-emerald-50 border-emerald-200'
-      default: return 'bg-slate-50 border-slate-200'
+      case 'blue': return 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+      case 'amber': return 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+      case 'emerald': return 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
+      default: return 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'
     }
   }
 
   const getCountColor = (color: string) => {
     switch (color) {
-      case 'blue': return 'bg-blue-100 text-blue-700'
-      case 'amber': return 'bg-amber-100 text-amber-700'
-      case 'emerald': return 'bg-emerald-100 text-emerald-700'
-      default: return 'bg-slate-200 text-slate-600'
+      case 'blue': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
+      case 'amber': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'
+      case 'emerald': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300'
+      default: return 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
     }
   }
 
@@ -109,20 +109,20 @@ export default function MyTasks() {
 
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="h-16 px-6 border-b border-slate-200 bg-white flex items-center justify-between shrink-0">
+        <header className="h-16 px-6 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
               <div className="size-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
                 <span className="material-symbols-outlined text-[20px]">task_alt</span>
               </div>
               <div>
-                <h2 className="text-lg font-bold text-slate-900">My Tasks</h2>
-                <p className="text-xs text-slate-500">Your assigned development work</p>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">My Tasks</h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Your assigned development work</p>
               </div>
             </div>
-            <div className="h-8 w-px bg-slate-200" />
+            <div className="h-8 w-px bg-slate-200 dark:bg-slate-700" />
             <div className="flex items-center gap-2">
-              <span className="text-sm text-slate-600 font-medium">{tasks.length} total tasks</span>
+              <span className="text-sm text-slate-600 dark:text-slate-300 font-medium">{tasks.length} total tasks</span>
             </div>
           </div>
         </header>
@@ -137,8 +137,8 @@ export default function MyTasks() {
                   {/* Column Header */}
                   <div className={`px-4 py-3 rounded-t-xl border-2 ${getColumnColor(column.color)} flex items-center justify-between`}>
                     <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[20px] text-slate-700">{column.icon}</span>
-                      <span className="font-bold text-sm text-slate-900">{column.label}</span>
+                      <span className="material-symbols-outlined text-[20px] text-slate-700 dark:text-slate-300">{column.icon}</span>
+                      <span className="font-bold text-sm text-slate-900 dark:text-white">{column.label}</span>
                     </div>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${getCountColor(column.color)}`}>
                       {columnTasks.length}
@@ -152,16 +152,16 @@ export default function MyTasks() {
                       return (
                         <div
                           key={task.id}
-                          className="bg-white rounded-lg border border-slate-200 p-4 hover:shadow-md transition-shadow cursor-pointer group"
+                          className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-slate-900/50 transition-shadow cursor-pointer group"
                         >
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex items-center gap-2 flex-1">
                               {task.type === 'bug' && (
-                                <span className="material-symbols-outlined text-red-500 text-[18px]">bug_report</span>
+                                <span className="material-symbols-outlined text-red-500 dark:text-red-400 text-[18px]">bug_report</span>
                               )}
                               <button
                                   onClick={(e) => { e.stopPropagation(); setSelectedTask(task); }}
-                                  className="font-semibold text-sm text-slate-900 line-clamp-2 text-left hover:text-primary hover:underline transition-colors"
+                                  className="font-semibold text-sm text-slate-900 dark:text-white line-clamp-2 text-left hover:text-primary dark:hover:text-blue-400 hover:underline transition-colors"
                                 >
                                   {task.title}
                                 </button>
@@ -172,7 +172,7 @@ export default function MyTasks() {
                           </div>
 
                           {task.description && (
-                            <p className="text-xs text-slate-600 line-clamp-2 mb-3">{task.description}</p>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 mb-3">{task.description}</p>
                           )}
 
                           {/* Status Change Buttons */}
@@ -185,7 +185,7 @@ export default function MyTasks() {
                                     updateTaskStatus(task.id, columns[currentIndex - 1].key)
                                   }
                                 }}
-                                className="flex-1 px-2 py-1.5 text-xs font-medium bg-slate-100 hover:bg-slate-200 rounded text-slate-700 flex items-center justify-center gap-1"
+                                className="flex-1 px-2 py-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1"
                               >
                                 <span className="material-symbols-outlined text-[16px]">chevron_left</span>
                                 Move Back
