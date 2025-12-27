@@ -57,7 +57,7 @@ export default function Requirements() {
 
   async function fetchProducts() {
     try {
-      const res = await fetch('http://localhost:4000/api/products', {
+      const res = await fetch('/api/products', {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
@@ -76,8 +76,8 @@ export default function Requirements() {
     setLoading(true)
     try {
       const url = statusFilter === 'all'
-        ? `http://localhost:4000/api/requirements?productId=${selectedProduct}`
-        : `http://localhost:4000/api/requirements?productId=${selectedProduct}&status=${statusFilter}`
+        ? `/api/requirements?productId=${selectedProduct}`
+        : `/api/requirements?productId=${selectedProduct}&status=${statusFilter}`
 
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` }
@@ -99,7 +99,7 @@ export default function Requirements() {
     }
 
     try {
-      const res = await fetch('http://localhost:4000/api/requirements', {
+      const res = await fetch('/api/requirements', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

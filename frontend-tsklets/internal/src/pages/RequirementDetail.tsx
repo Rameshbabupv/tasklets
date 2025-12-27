@@ -44,7 +44,7 @@ export default function RequirementDetail() {
 
   async function fetchRequirement() {
     try {
-      const res = await fetch(`http://localhost:4000/api/requirements/${id}`, {
+      const res = await fetch(`/api/requirements/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
@@ -60,7 +60,7 @@ export default function RequirementDetail() {
 
   async function fetchAmendments() {
     try {
-      const res = await fetch(`http://localhost:4000/api/requirements/${id}/amendments`, {
+      const res = await fetch(`/api/requirements/${id}/amendments`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
@@ -80,7 +80,7 @@ export default function RequirementDetail() {
         body.approvers = statusData.approvers.split(',').map(s => s.trim())
       }
 
-      const res = await fetch(`http://localhost:4000/api/requirements/${id}/status`, {
+      const res = await fetch(`/api/requirements/${id}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +106,7 @@ export default function RequirementDetail() {
 
   async function handleUpdateRequirement() {
     try {
-      const res = await fetch(`http://localhost:4000/api/requirements/${id}`, {
+      const res = await fetch(`/api/requirements/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -133,7 +133,7 @@ export default function RequirementDetail() {
     }
 
     try {
-      const res = await fetch(`http://localhost:4000/api/requirements/${id}/amendments`, {
+      const res = await fetch(`/api/requirements/${id}/amendments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -158,7 +158,7 @@ export default function RequirementDetail() {
     if (!confirm('Are you sure you want to delete this requirement?')) return
 
     try {
-      const res = await fetch(`http://localhost:4000/api/requirements/${id}`, {
+      const res = await fetch(`/api/requirements/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` }
       })
