@@ -17,6 +17,7 @@ import { taskRoutes } from './routes/tasks.js'
 import { ideaRoutes } from './routes/ideas.js'
 import { teamRoutes } from './routes/teams.js'
 import { sprintRoutes } from './routes/sprints.js'
+import { executiveRoutes } from './routes/executive.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -75,6 +76,7 @@ app.use('/api/tasks', taskRoutes)
 app.use('/api/ideas', ideaRoutes)
 app.use('/api/teams', teamRoutes)
 app.use('/api/sprints', sprintRoutes)
+app.use('/api/executive', executiveRoutes)
 
 // Health check
 app.get('/health', (_, res) => res.json({ status: 'ok' }))

@@ -16,6 +16,8 @@ import Sprints from './pages/Sprints'
 import SprintBoard from './pages/SprintBoard'
 import Backlog from './pages/Backlog'
 import SprintRetro from './pages/SprintRetro'
+import ExecutiveDashboard from './pages/ExecutiveDashboard'
+import Roadmap from './pages/Roadmap'
 import DevUserSwitcher from './components/DevUserSwitcher'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -57,6 +59,8 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/executive" element={<PrivateRoute><ExecutiveDashboard /></PrivateRoute>} />
+        <Route path="/roadmap" element={<PrivateRoute><Roadmap /></PrivateRoute>} />
         <Route path="/tickets" element={<PrivateRoute><SupportQueue /></PrivateRoute>} />
         <Route path="/tickets/:id" element={<PrivateRoute><TicketDetail /></PrivateRoute>} />
         <Route path="/clients" element={<PrivateRoute><Clients /></PrivateRoute>} />
