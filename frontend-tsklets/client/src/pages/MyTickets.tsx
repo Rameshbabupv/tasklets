@@ -3,33 +3,23 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { useAuthStore } from '../store/auth'
+import { StatusBadge, PriorityPill } from '@tsklets/ui'
 import ThemeToggle from '../components/ThemeToggle'
-
-interface Ticket {
-  id: number
-  issueKey: string
-  subject: string
-  description: string
-  status: string
-  priority: string
-  severity: string
-  createdAt: string
-  clientId: number
-  productId: number
-}
+import TicketDetailModal from '../components/TicketDetailModal'
+import type { Ticket } from '@tsklets/types'
 
 const statusColors: Record<string, string> = {
-  open: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-300 dark:border-blue-700',
-  in_progress: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700',
-  resolved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-300 dark:border-green-700',
-  closed: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600',
+  open: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 border-blue-300 dark:border-blue-700',
+  in_progress: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700',
+  resolved: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300 border-green-300 dark:border-green-700',
+  closed: 'bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300 border-slate-300 dark:border-slate-600',
 }
 
-const priorityColors: Record<string, string> = {
-  P1: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border-red-300 dark:border-red-700',
-  P2: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border-orange-300 dark:border-orange-700',
-  P3: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700',
-  P4: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600',
+const priorityLabels: Record<number, string> = {
+  1: 'P1 - Critical',
+  2: 'P2 - High',
+  3: 'P3 - Medium',
+  4: 'P4 - Low',
 }
 
 const ITEMS_PER_PAGE = 20
@@ -42,6 +32,7 @@ export default function MyTickets() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
+  const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null)
 
   // Filter state from URL params
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all')
@@ -102,18 +93,21 @@ export default function MyTickets() {
         return false
       }
 
-      // Priority filter
-      if (priorityFilter !== 'all' && ticket.priority !== priorityFilter) {
-        return false
+      // Priority filter (convert string P1/P2/etc to number)
+      if (priorityFilter !== 'all') {
+        const priorityNum = parseInt(priorityFilter.replace('P', ''))
+        if (ticket.clientPriority !== priorityNum) {
+          return false
+        }
       }
 
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase()
-        const matchSubject = ticket.subject.toLowerCase().includes(query)
+        const matchTitle = ticket.title?.toLowerCase().includes(query)
         const matchDescription = ticket.description?.toLowerCase().includes(query)
-        const matchIssueKey = ticket.issueKey.toLowerCase().includes(query)
-        if (!matchSubject && !matchDescription && !matchIssueKey) {
+        const matchId = ticket.id.toString().includes(query)
+        if (!matchTitle && !matchDescription && !matchId) {
           return false
         }
       }
@@ -421,34 +415,30 @@ export default function MyTickets() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <Link
-                    to={`/tickets/${ticket.id}`}
-                    className="block rounded-lg border p-4 hover:border-primary/50 hover:shadow-lg transition-all"
+                  <button
+                    onClick={() => setSelectedTicketId(ticket.id)}
+                    className="block w-full text-left rounded-lg border p-4 hover:border-primary/50 hover:shadow-lg transition-all"
                     style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}
                   >
                     {/* Header Row */}
                     <div className="flex items-start justify-between mb-3">
                       <span className="font-mono text-xs font-semibold text-primary">
-                        {ticket.issueKey}
+                        #{ticket.id}
                       </span>
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium border ${statusColors[ticket.status] || statusColors.open}`}>
-                        {ticket.status.replace('_', ' ').toUpperCase()}
-                      </span>
+                      <StatusBadge status={ticket.status} />
                     </div>
 
                     {/* Subject */}
                     <h3 className="font-semibold mb-2 line-clamp-2" style={{ color: 'var(--text-primary)' }}>
-                      {ticket.subject}
+                      {ticket.title}
                     </h3>
 
                     {/* Footer */}
                     <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-muted)' }}>
-                      <span className={`px-2 py-0.5 rounded border ${priorityColors[ticket.priority] || priorityColors.P4}`}>
-                        {ticket.priority}
-                      </span>
+                      <PriorityPill priority={ticket.clientPriority} />
                       <span>{formatDate(ticket.createdAt)}</span>
                     </div>
-                  </Link>
+                  </button>
                 </motion.div>
               ))}
             </div>
@@ -456,26 +446,16 @@ export default function MyTickets() {
             {/* Desktop Table (>= 768px) */}
             <div className="hidden md:block overflow-x-auto mb-6">
               <table className="w-full">
-                <thead>
-                  <tr className="border-b" style={{ borderColor: 'var(--border-primary)' }}>
-                    <th className="text-left py-3 px-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                      Issue Key
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                      Subject
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                      Status
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                      Priority
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                      Created
-                    </th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>
-                      Action
-                    </th>
+                <thead className="bg-slate-100 dark:bg-slate-700">
+                  <tr className="text-left text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-200">
+                    <th className="py-3 px-4">ID</th>
+                    <th className="py-3 px-4">Subject</th>
+                    <th className="py-3 px-4">Type</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Priority</th>
+                    <th className="py-3 px-4">Created By</th>
+                    <th className="py-3 px-4">Created</th>
+                    <th className="py-3 px-4">Updated</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -490,39 +470,41 @@ export default function MyTickets() {
                     >
                       <td className="py-3 px-4">
                         <span className="font-mono text-sm font-semibold text-primary">
-                          {ticket.issueKey}
+                          #{ticket.id}
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <Link
-                          to={`/tickets/${ticket.id}`}
-                          className="font-medium hover:text-primary transition-colors"
+                        <button
+                          onClick={() => setSelectedTicketId(ticket.id)}
+                          className="font-medium hover:text-primary transition-colors text-left"
                           style={{ color: 'var(--text-primary)' }}
                         >
-                          {ticket.subject}
-                        </Link>
+                          {ticket.title}
+                        </button>
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded text-xs font-medium border ${statusColors[ticket.status] || statusColors.open}`}>
-                          {ticket.status.replace('_', ' ').toUpperCase()}
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+                          ticket.type === 'feature_request'
+                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300'
+                            : 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'
+                        }`}>
+                          {ticket.type === 'feature_request' ? '✨ Feature' : '🎫 Support'}
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded text-xs font-medium border ${priorityColors[ticket.priority] || priorityColors.P4}`}>
-                          {ticket.priority}
-                        </span>
+                        <StatusBadge status={ticket.status} />
+                      </td>
+                      <td className="py-3 px-4">
+                        <PriorityPill priority={ticket.clientPriority} />
+                      </td>
+                      <td className="py-3 px-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                        {ticket.createdByName || 'Unknown'}
                       </td>
                       <td className="py-3 px-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
                         {formatDate(ticket.createdAt)}
                       </td>
-                      <td className="py-3 px-4 text-right">
-                        <Link
-                          to={`/tickets/${ticket.id}`}
-                          className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-                        >
-                          View
-                          <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                        </Link>
+                      <td className="py-3 px-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                        {formatDate(ticket.updatedAt)}
                       </td>
                     </motion.tr>
                   ))}
@@ -619,6 +601,12 @@ export default function MyTickets() {
           </>
         )}
       </main>
+
+      {/* Ticket Detail Modal */}
+      <TicketDetailModal
+        ticketId={selectedTicketId}
+        onClose={() => setSelectedTicketId(null)}
+      />
     </div>
   )
 }
