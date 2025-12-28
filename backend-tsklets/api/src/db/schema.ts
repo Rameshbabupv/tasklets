@@ -52,6 +52,7 @@ export const users = pgTable('users', {
     enum: ['user', 'gatekeeper', 'company_admin', 'approver', 'integrator', 'support', 'ceo', 'admin', 'developer']
   }).default('user'),
   isActive: boolean('is_active').default(true),
+  requirePasswordChange: boolean('require_password_change').default(true), // Force password change on first login or after reset
   createdAt: timestamp('created_at').defaultNow(),
 })
 
@@ -110,6 +111,9 @@ export const tickets = pgTable('tickets', {
   clientId: integer('client_id').references(() => clients.id).notNull(),
   title: text('title').notNull(),
   description: text('description'),
+  type: text('type', {
+    enum: ['support', 'feature_request']
+  }).default('support'), // Support ticket or feature request
   status: text('status', {
     enum: ['open', 'in_progress', 'resolved', 'closed']
   }).default('open'),

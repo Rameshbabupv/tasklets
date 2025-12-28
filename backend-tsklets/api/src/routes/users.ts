@@ -7,7 +7,15 @@ import { authenticate, requireInternal } from '../middleware/auth.js'
 
 export const userRoutes = Router()
 
-const STANDARD_PASSWORD = 'systech@123'
+const STANDARD_PASSWORD = 'Systech@123'
+
+// Middleware to check if user is company_admin
+const requireCompanyAdmin = (req: any, res: any, next: any) => {
+  if (req.user?.role !== 'company_admin') {
+    return res.status(403).json({ error: 'Access denied. Company admin role required.' })
+  }
+  next()
+}
 
 // All routes require authentication
 userRoutes.use(authenticate)
@@ -266,6 +274,171 @@ userRoutes.put('/:id/products', requireInternal, async (req, res) => {
     res.json(productList)
   } catch (error) {
     console.error('Update user products error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ========================================
+// COMPANY ADMIN ENDPOINTS (Client-facing)
+// ========================================
+
+// List all users in company admin's company
+userRoutes.get('/company', requireCompanyAdmin, async (req, res) => {
+  try {
+    const { tenantId, clientId } = req.user!
+
+    if (!clientId) {
+      return res.status(400).json({ error: 'Company admin must be associated with a client' })
+    }
+
+    const companyUsers = await db.query.users.findMany({
+      where: and(
+        eq(users.clientId, clientId),
+        eq(users.tenantId, tenantId)
+      ),
+      columns: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        requirePasswordChange: true,
+        createdAt: true,
+      },
+      with: {
+        products: {
+          with: {
+            product: true,
+          },
+        },
+      },
+    })
+
+    // Format response with product names
+    const formatted = companyUsers.map((user: any) => ({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      isActive: user.isActive,
+      requirePasswordChange: user.requirePasswordChange,
+      createdAt: user.createdAt,
+      products: user.products?.map((up: any) => up.product) || [],
+    }))
+
+    res.json(formatted)
+  } catch (error) {
+    console.error('List company users error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Create new user in company (company_admin can create users and company_admins)
+userRoutes.post('/company', requireCompanyAdmin, async (req, res) => {
+  try {
+    const { email, name, role, productIds } = req.body
+    const { tenantId, clientId } = req.user!
+
+    if (!clientId) {
+      return res.status(400).json({ error: 'Company admin must be associated with a client' })
+    }
+
+    if (!email || !name) {
+      return res.status(400).json({ error: 'Email and name are required' })
+    }
+
+    // Validate role: company_admin can only create 'user' or 'company_admin'
+    if (role && !['user', 'company_admin'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role. Can only create user or company_admin' })
+    }
+
+    // Check if email already exists in this tenant
+    const existing = await db.select().from(users)
+      .where(and(
+        eq(users.email, email),
+        eq(users.tenantId, tenantId)
+      ))
+      .limit(1)
+
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'User with this email already exists' })
+    }
+
+    const passwordHash = await bcrypt.hash(STANDARD_PASSWORD, 10)
+
+    const [user] = await db.insert(users).values({
+      email,
+      name,
+      role: role || 'user',
+      tenantId,
+      clientId,
+      passwordHash,
+      requirePasswordChange: true, // User must change password on first login
+    }).returning()
+
+    // Assign products if provided
+    if (productIds && Array.isArray(productIds) && productIds.length > 0) {
+      const values = productIds.map((productId: number) => ({
+        userId: user.id,
+        productId,
+        tenantId,
+      }))
+      await db.insert(userProducts).values(values)
+    }
+
+    res.status(201).json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      requirePasswordChange: user.requirePasswordChange,
+      message: `User created with default password: ${STANDARD_PASSWORD}`,
+    })
+  } catch (error) {
+    console.error('Create company user error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Reset user password to Systech@123
+userRoutes.patch('/:id/reset-password', requireCompanyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { tenantId, clientId } = req.user!
+    const userId = parseInt(id)
+
+    if (!clientId) {
+      return res.status(400).json({ error: 'Company admin must be associated with a client' })
+    }
+
+    // Verify user belongs to same company
+    const [targetUser] = await db.select().from(users)
+      .where(and(
+        eq(users.id, userId),
+        eq(users.tenantId, tenantId),
+        eq(users.clientId, clientId)
+      ))
+      .limit(1)
+
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found or access denied' })
+    }
+
+    const passwordHash = await bcrypt.hash(STANDARD_PASSWORD, 10)
+
+    await db.update(users)
+      .set({
+        passwordHash,
+        requirePasswordChange: true, // Force password change on next login
+      })
+      .where(eq(users.id, userId))
+
+    res.json({
+      success: true,
+      message: `Password reset to ${STANDARD_PASSWORD}. User will be required to change password on next login.`,
+    })
+  } catch (error) {
+    console.error('Reset password error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

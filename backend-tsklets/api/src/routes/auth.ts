@@ -117,6 +117,7 @@ authRoutes.post('/signin', async (req, res) => {
         tenantId: user.tenantId,
         clientId: user.clientId,
         isInternal,
+        requirePasswordChange: user.requirePasswordChange || false,
       },
       token,
     })
@@ -161,9 +162,74 @@ authRoutes.get('/me', async (req, res) => {
         tenantId: user.tenantId,
         clientId: user.clientId,
         isInternal,
+        requirePasswordChange: user.requirePasswordChange || false,
       },
     })
   } catch {
     res.status(401).json({ error: 'Invalid token' })
+  }
+})
+
+// Change password (authenticated users)
+authRoutes.post('/change-password', async (req, res) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'No token' })
+  }
+
+  try {
+    const jwt = await import('jsonwebtoken')
+    const token = authHeader.split(' ')[1]
+    const jwtSecret = process.env.JWT_SECRET
+    if (!jwtSecret) {
+      return res.status(500).json({ error: 'Server configuration error' })
+    }
+    const payload = jwt.default.verify(token, jwtSecret) as any
+
+    const { currentPassword, newPassword } = req.body
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current password and new password are required' })
+    }
+
+    // Validate new password complexity
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({
+        error: 'Password must be at least 8 characters with 1 uppercase, 1 lowercase, 1 number, and 1 special character'
+      })
+    }
+
+    // Get user
+    const [user] = await db.select().from(users)
+      .where(eq(users.id, payload.userId))
+      .limit(1)
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    // Verify current password
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash)
+    if (!valid) {
+      return res.status(401).json({ error: 'Current password is incorrect' })
+    }
+
+    // Hash and update new password
+    const passwordHash = await bcrypt.hash(newPassword, 10)
+    await db.update(users)
+      .set({
+        passwordHash,
+        requirePasswordChange: false, // Clear the flag
+      })
+      .where(eq(users.id, payload.userId))
+
+    res.json({
+      success: true,
+      message: 'Password changed successfully',
+    })
+  } catch (error) {
+    console.error('Change password error:', error)
+    res.status(500).json({ error: 'Internal server error' })
   }
 })
