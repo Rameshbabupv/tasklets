@@ -10,6 +10,7 @@ import StatCard from '../components/StatCard'
 import ModuleCard from '../components/ModuleCard'
 import NewTicketModal from '../components/NewTicketModal'
 import ChangePasswordModal from '../components/ChangePasswordModal'
+import TicketDetailModal from '../components/TicketDetailModal'
 import ThemeToggle from '../components/ThemeToggle'
 
 export default function Dashboard() {
@@ -18,6 +19,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [showNewTicketModal, setShowNewTicketModal] = useState(false)
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
+  const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null)
   const passwordCheckDone = useRef(false)
   const navigate = useNavigate()
 
@@ -279,13 +281,13 @@ export default function Dashboard() {
                     >
                       <td className="px-6 py-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>#{ticket.id}</td>
                       <td className="px-6 py-4">
-                        <Link
-                          to={`/tickets/${ticket.id}`}
-                          className="text-sm font-semibold hover:text-primary transition-colors"
+                        <button
+                          onClick={() => setSelectedTicketId(ticket.id)}
+                          className="text-sm font-semibold hover:text-primary transition-colors text-left"
                           style={{ color: 'var(--text-primary)' }}
                         >
                           {ticket.title}
-                        </Link>
+                        </button>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
@@ -319,9 +321,9 @@ export default function Dashboard() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 + index * 0.05 }}
                   >
-                    <Link
-                      to={`/tickets/${ticket.id}`}
-                      className="block p-4 active:bg-slate-50 dark:active:bg-slate-800 transition-colors min-h-[44px]"
+                    <button
+                      onClick={() => setSelectedTicketId(ticket.id)}
+                      className="block w-full text-left p-4 active:bg-slate-50 dark:active:bg-slate-800 transition-colors min-h-[44px]"
                     >
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex-1 min-w-0">
@@ -349,7 +351,7 @@ export default function Dashboard() {
                           {formatDate(ticket.createdAt)}
                         </span>
                       </div>
-                    </Link>
+                    </button>
                   </motion.div>
                 ))}
               </div>
@@ -367,6 +369,12 @@ export default function Dashboard() {
 
       {/* New Ticket Modal */}
       <NewTicketModal isOpen={showNewTicketModal} onClose={() => setShowNewTicketModal(false)} />
+
+      {/* Ticket Detail Modal */}
+      <TicketDetailModal
+        ticketId={selectedTicketId}
+        onClose={() => setSelectedTicketId(null)}
+      />
 
       {/* Toast Notifications */}
       <Toaster position="top-right" richColors />
