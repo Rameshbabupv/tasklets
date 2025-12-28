@@ -29,6 +29,8 @@ export const clients = pgTable('clients', {
   id: serial('id').primaryKey(),
   tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
   name: text('name').notNull(),
+  // Client type: owner = tenant's own company, customer = paying client, partner = integration partner
+  type: text('type', { enum: ['owner', 'customer', 'partner'] }).default('customer'),
   tier: text('tier', { enum: ['enterprise', 'business', 'starter'] }).default('starter'),
   gatekeeperEnabled: boolean('gatekeeper_enabled').default(false),
   isActive: boolean('is_active').default(true),
@@ -70,12 +72,14 @@ export const products = pgTable('products', {
   createdAt: timestamp('created_at').defaultNow(),
 })
 
-// Per-type sequence counters for issue keys (E001, F001, T001, B001, R001)
+// Per-type sequence counters for issue keys (E001, F001, T001, B001, S001, etc.)
+// Sequence is auto-created on first use for each product+type combination
 export const productSequences = pgTable('product_sequences', {
   id: serial('id').primaryKey(),
   productId: integer('product_id').references(() => products.id).notNull(),
+  // Type codes: E=Epic, F=Feature, T=Task, B=Bug, S=Support, R=Request(feature_request), N=Note, K=Spike
   issueType: text('issue_type', {
-    enum: ['E', 'F', 'T', 'B', 'S', 'N', 'R'] // Epic, Feature, Task, Bug, Spike, Note, Requirement
+    enum: ['E', 'F', 'T', 'B', 'S', 'R', 'N', 'K']
   }).notNull(),
   nextNum: integer('next_num').default(1).notNull(),
   createdAt: timestamp('created_at').defaultNow(),
@@ -102,45 +106,98 @@ export const userProducts = pgTable('user_products', {
 })
 
 // ========================================
-// TICKETS (Client Support)
+// TICKETS (Client Support & Internal Issues)
 // ========================================
+// Unified issue tracking with human-readable keys like TKL-S-001, HRMS-F-023
 
 export const tickets = pgTable('tickets', {
-  id: serial('id').primaryKey(),
+  id: text('id').primaryKey(), // nanoUUID (e.g., 'abc123xyz')
   tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
-  clientId: integer('client_id').references(() => clients.id).notNull(),
+  clientId: integer('client_id').references(() => clients.id), // NULL for internal-only tickets
+  productId: integer('product_id').references(() => products.id).notNull(),
+
+  // Human-readable key (e.g., 'TKL-S-001', 'HRMS-F-023')
+  issueKey: text('issue_key').unique().notNull(),
+
+  // Beads integration
+  beadsId: text('beads_id'), // Link to beads CLI issue for sync
+
   title: text('title').notNull(),
   description: text('description'),
+
+  // Issue type with single-letter prefix for key generation
+  // S=Support, R=Request (feature), E=Epic, F=Feature, T=Task, B=Bug, N=Note, K=Spike
   type: text('type', {
-    enum: ['support', 'feature_request']
-  }).default('support'), // Support ticket or feature request
+    enum: ['support', 'feature_request', 'epic', 'feature', 'task', 'bug', 'spike', 'note']
+  }).default('support').notNull(),
+
   status: text('status', {
-    enum: ['open', 'in_progress', 'resolved', 'closed']
+    enum: ['open', 'in_progress', 'review', 'blocked', 'resolved', 'closed', 'cancelled']
   }).default('open'),
+
+  // Priority & Severity (client-facing and internal)
   clientPriority: integer('client_priority').default(3),
   clientSeverity: integer('client_severity').default(3),
   internalPriority: integer('internal_priority'),
   internalSeverity: integer('internal_severity'),
-  productId: integer('product_id').references(() => products.id),
-  createdBy: integer('created_by').references(() => users.id), // Who entered in system
+
+  // Hierarchy: parent ticket for Epic→Feature→Task structure
+  parentId: text('parent_id'), // References tickets.id (self-reference)
+
+  // Ownership
+  createdBy: integer('created_by').references(() => users.id), // Who created in system
   reporterId: integer('reporter_id').references(() => users.id), // Who reported the issue
-  assignedTo: integer('assigned_to').references(() => users.id), // Internal assignee
+  assignedTo: integer('assigned_to').references(() => users.id), // Primary assignee
   integratorId: integer('integrator_id').references(() => users.id),
-  sourceIdeaId: integer('source_idea_id'), // Will reference ideas.id
-  largeFileLink: text('large_file_link'), // Dropbox/OneDrive/Google Drive link for large files
-  metadata: jsonb('metadata'), // Dynamic fields: { customField1, customField2, ... }
+
+  // Planning
+  storyPoints: integer('story_points'), // Fibonacci: 1,2,3,5,8,13
+  estimate: integer('estimate'), // Estimated hours
+  dueDate: timestamp('due_date'),
+  labels: text('labels').array(), // Tags for categorization
+
+  // External links
+  sourceIdeaId: integer('source_idea_id'), // Link to ideas.id
+  largeFileLink: text('large_file_link'), // Dropbox/OneDrive/Google Drive link
+
+  // Dynamic fields
+  metadata: jsonb('metadata'), // { customFields, stepsToReproduce, acceptanceCriteria, ... }
+
+  // Resolution
+  resolution: text('resolution', {
+    enum: ['completed', 'duplicate', 'wont_do', 'moved', 'invalid', 'obsolete', 'cannot_reproduce']
+  }),
+  resolutionNote: text('resolution_note'),
+  closedAt: timestamp('closed_at'),
+
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),
 })
+
+// Ticket Links (blocks, blocked_by, relates_to, duplicates)
+export const ticketLinks = pgTable('ticket_links', {
+  id: serial('id').primaryKey(),
+  tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
+  sourceTicketId: text('source_ticket_id').references(() => tickets.id).notNull(),
+  targetTicketId: text('target_ticket_id').references(() => tickets.id).notNull(),
+  linkType: text('link_type', {
+    enum: ['blocks', 'blocked_by', 'relates_to', 'duplicates', 'duplicated_by', 'parent_of', 'child_of']
+  }).notNull(),
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  uniqueLink: unique().on(table.sourceTicketId, table.targetTicketId, table.linkType),
+}))
 
 // Attachment
 export const attachments = pgTable('attachments', {
   id: serial('id').primaryKey(),
   tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
-  ticketId: integer('ticket_id').references(() => tickets.id),
+  ticketId: text('ticket_id').references(() => tickets.id), // nanoUUID reference
   fileUrl: text('file_url').notNull(),
   fileName: text('file_name').notNull(),
   fileSize: integer('file_size'),
+  mimeType: text('mime_type'), // e.g., 'image/png', 'video/mp4'
   createdAt: timestamp('created_at').defaultNow(),
 })
 
@@ -148,7 +205,7 @@ export const attachments = pgTable('attachments', {
 export const ticketComments = pgTable('ticket_comments', {
   id: serial('id').primaryKey(),
   tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
-  ticketId: integer('ticket_id').references(() => tickets.id),
+  ticketId: text('ticket_id').references(() => tickets.id), // nanoUUID reference
   userId: integer('user_id').references(() => users.id),
   content: text('content').notNull(),
   isInternal: boolean('is_internal').default(false),
@@ -290,7 +347,7 @@ export const taskAssignments = pgTable('task_assignments', {
 export const supportTicketTasks = pgTable('support_ticket_tasks', {
   id: serial('id').primaryKey(),
   tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
-  ticketId: integer('ticket_id').references(() => tickets.id).notNull(),
+  ticketId: text('ticket_id').references(() => tickets.id).notNull(), // nanoUUID reference
   taskId: integer('task_id').references(() => devTasks.id).notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 })
@@ -419,7 +476,7 @@ export const ideaTickets = pgTable('idea_tickets', {
   id: serial('id').primaryKey(),
   tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
   ideaId: integer('idea_id').references(() => ideas.id).notNull(),
-  ticketId: integer('ticket_id').references(() => tickets.id).notNull(),
+  ticketId: text('ticket_id').references(() => tickets.id).notNull(), // nanoUUID reference
   createdAt: timestamp('created_at').defaultNow(),
 })
 
@@ -572,7 +629,7 @@ export const userProductsRelations = relations(userProducts, ({ one }) => ({
   }),
 }))
 
-export const ticketsRelations = relations(tickets, ({ one }) => ({
+export const ticketsRelations = relations(tickets, ({ one, many }) => ({
   tenant: one(tenants, {
     fields: [tickets.tenantId],
     references: [tenants.id],
@@ -589,9 +646,47 @@ export const ticketsRelations = relations(tickets, ({ one }) => ({
     fields: [tickets.reporterId],
     references: [users.id],
   }),
+  assignee: one(users, {
+    fields: [tickets.assignedTo],
+    references: [users.id],
+  }),
   product: one(products, {
     fields: [tickets.productId],
     references: [products.id],
+  }),
+  // Hierarchy: parent ticket (Epic→Feature→Task)
+  parent: one(tickets, {
+    fields: [tickets.parentId],
+    references: [tickets.id],
+    relationName: 'parentChild',
+  }),
+  children: many(tickets, { relationName: 'parentChild' }),
+  // Links: blocks, relates_to, etc.
+  outgoingLinks: many(ticketLinks, { relationName: 'sourceLinks' }),
+  incomingLinks: many(ticketLinks, { relationName: 'targetLinks' }),
+  // Attachments & comments
+  attachments: many(attachments),
+  comments: many(ticketComments),
+}))
+
+export const ticketLinksRelations = relations(ticketLinks, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [ticketLinks.tenantId],
+    references: [tenants.id],
+  }),
+  sourceTicket: one(tickets, {
+    fields: [ticketLinks.sourceTicketId],
+    references: [tickets.id],
+    relationName: 'sourceLinks',
+  }),
+  targetTicket: one(tickets, {
+    fields: [ticketLinks.targetTicketId],
+    references: [tickets.id],
+    relationName: 'targetLinks',
+  }),
+  creator: one(users, {
+    fields: [ticketLinks.createdBy],
+    references: [users.id],
   }),
 }))
 

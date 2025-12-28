@@ -1,11 +1,23 @@
 import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useCreateHub, CreateType } from '../../store/createHub'
 import { useAuthStore } from '../../store/auth'
 import { toast } from 'sonner'
 
 interface CreateFormProps {
   type: CreateType
+}
+
+interface Client {
+  id: number
+  name: string
+  type: 'owner' | 'customer' | 'partner'
+}
+
+interface ClientUser {
+  id: number
+  name: string
+  email: string
 }
 
 const typeConfig = {
@@ -23,13 +35,70 @@ export default function CreateForm({ type }: CreateFormProps) {
   const { token } = useAuthStore()
   const [mode, setMode] = useState<'quick' | 'detailed'>('quick')
   const [submitting, setSubmitting] = useState(false)
+  const [clients, setClients] = useState<Client[]>([])
+  const [clientUsers, setClientUsers] = useState<ClientUser[]>([])
+  const [loadingClients, setLoadingClients] = useState(false)
+  const [loadingUsers, setLoadingUsers] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     priority: 3,
     labels: '',
     targetDate: '',
+    clientId: 0,
+    reporterId: 0,
   })
+
+  // Fetch clients list when creating a ticket
+  useEffect(() => {
+    if (type === 'ticket') {
+      fetchClients()
+    }
+  }, [type])
+
+  // Fetch users when client changes
+  useEffect(() => {
+    if (type === 'ticket' && formData.clientId > 0) {
+      fetchClientUsers(formData.clientId)
+    } else {
+      setClientUsers([])
+      setFormData(prev => ({ ...prev, reporterId: 0 }))
+    }
+  }, [formData.clientId, type])
+
+  const fetchClients = async () => {
+    setLoadingClients(true)
+    try {
+      const res = await fetch('/api/clients', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setClients(data.clients || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch clients:', error)
+    } finally {
+      setLoadingClients(false)
+    }
+  }
+
+  const fetchClientUsers = async (clientId: number) => {
+    setLoadingUsers(true)
+    try {
+      const res = await fetch(`/api/users/client/${clientId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setClientUsers(data || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch client users:', error)
+    } finally {
+      setLoadingUsers(false)
+    }
+  }
 
   const config = typeConfig[type]
 
@@ -69,8 +138,14 @@ export default function CreateForm({ type }: CreateFormProps) {
         body.type = 'bug'
       } else if (type === 'ticket') {
         endpoint = '/api/tickets'
-        body.clientId = 1 // TODO: Get from context
         body.productId = 14 // Tasklets product ID
+        // Add client and reporter if selected
+        if (formData.clientId > 0) {
+          body.clientId = formData.clientId
+        }
+        if (formData.reporterId > 0) {
+          body.reporterId = formData.reporterId
+        }
       }
 
       // Add optional fields for detailed mode
@@ -208,6 +283,56 @@ export default function CreateForm({ type }: CreateFormProps) {
             className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/50 text-slate-900 dark:text-white placeholder:text-slate-400 resize-none"
           />
         </div>
+
+        {/* Client and Reporter selection for tickets */}
+        {type === 'ticket' && (
+          <div className="grid grid-cols-2 gap-4">
+            {/* Client dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Client / Company
+              </label>
+              <select
+                value={formData.clientId}
+                onChange={(e) => setFormData({ ...formData, clientId: parseInt(e.target.value), reporterId: 0 })}
+                disabled={loadingClients}
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/50 text-slate-900 dark:text-white disabled:opacity-50"
+              >
+                <option value={0}>-- Internal (No Client) --</option>
+                {clients.map(client => (
+                  <option key={client.id} value={client.id}>
+                    {client.name} {client.type === 'owner' ? '(Owner)' : client.type === 'partner' ? '(Partner)' : ''}
+                  </option>
+                ))}
+              </select>
+              {loadingClients && <p className="text-xs text-slate-500 mt-1">Loading clients...</p>}
+            </div>
+
+            {/* Reporter dropdown - only show when client is selected */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Reporter
+              </label>
+              <select
+                value={formData.reporterId}
+                onChange={(e) => setFormData({ ...formData, reporterId: parseInt(e.target.value) })}
+                disabled={formData.clientId === 0 || loadingUsers}
+                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/50 text-slate-900 dark:text-white disabled:opacity-50"
+              >
+                <option value={0}>{formData.clientId === 0 ? '-- Select client first --' : '-- Me (Creator) --'}</option>
+                {clientUsers.map(user => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} ({user.email})
+                  </option>
+                ))}
+              </select>
+              {loadingUsers && <p className="text-xs text-slate-500 mt-1">Loading users...</p>}
+              {formData.clientId > 0 && clientUsers.length === 0 && !loadingUsers && (
+                <p className="text-xs text-amber-500 mt-1">No users found for this client</p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Additional fields in detailed mode */}
         {mode === 'detailed' && (

@@ -25,6 +25,7 @@ export default function UserManagement() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
 
   const isCompanyAdmin = currentUser?.role === 'company_admin'
 
@@ -169,9 +170,14 @@ export default function UserManagement() {
                     <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                       <td className="px-6 py-4">
                         <div>
-                          <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{user.name}</p>
+                          <button
+                            onClick={() => setEditingUser(user)}
+                            className="font-semibold text-sm text-primary hover:text-purple-600 hover:underline text-left"
+                          >
+                            {user.name}
+                          </button>
                           {user.requirePasswordChange && (
-                            <span className="text-xs text-yellow-600 dark:text-yellow-400">Password change required</span>
+                            <span className="block text-xs text-yellow-600 dark:text-yellow-400">Password change required</span>
                           )}
                         </div>
                       </td>
@@ -231,7 +237,12 @@ export default function UserManagement() {
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
-                      <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>{user.name}</h3>
+                      <button
+                        onClick={() => setEditingUser(user)}
+                        className="font-semibold text-primary hover:text-purple-600 hover:underline text-left"
+                      >
+                        {user.name}
+                      </button>
                       <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{user.email}</p>
                     </div>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -290,6 +301,20 @@ export default function UserManagement() {
           onClose={() => setShowCreateModal(false)}
           onSuccess={() => {
             setShowCreateModal(false)
+            fetchUsers()
+          }}
+          token={token!}
+        />
+      )}
+
+      {/* Edit User Modal */}
+      {editingUser && (
+        <EditUserModal
+          user={editingUser}
+          products={products}
+          onClose={() => setEditingUser(null)}
+          onSuccess={() => {
+            setEditingUser(null)
             fetchUsers()
           }}
           token={token!}
@@ -445,6 +470,186 @@ function CreateUserModal({ products, onClose, onSuccess, token }: CreateUserModa
             >
               <span className="material-symbols-outlined text-lg">add</span>
               {loading ? 'Creating...' : 'Create User'}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  )
+}
+
+// Edit User Modal Component
+interface EditUserModalProps {
+  user: User
+  products: Product[]
+  onClose: () => void
+  onSuccess: () => void
+  token: string
+}
+
+function EditUserModal({ user, products, onClose, onSuccess, token }: EditUserModalProps) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [form, setForm] = useState({
+    name: user.name,
+    role: user.role,
+    isActive: user.isActive,
+    productIds: user.products.map(p => p.id),
+  })
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+
+    try {
+      const res = await fetch(`/api/users/company/${user.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(form),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to update user')
+      }
+
+      onSuccess()
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleProductToggle = (productId: number) => {
+    if (form.productIds.includes(productId)) {
+      setForm({ ...form, productIds: form.productIds.filter(id => id !== productId) })
+    } else {
+      setForm({ ...form, productIds: [...form.productIds, productId] })
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-lg w-full p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Edit User</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
+            <input
+              type="email"
+              value={user.email}
+              disabled
+              className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-600 text-slate-500 dark:text-slate-400 cursor-not-allowed"
+            />
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Email cannot be changed</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Name *</label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+              className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Role *</label>
+            <select
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              className="w-full px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary"
+            >
+              <option value="user">User</option>
+              <option value="company_admin">Company Admin</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, isActive: true })}
+                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  form.isActive
+                    ? 'bg-green-100 border-green-500 text-green-700 dark:bg-green-900/30 dark:border-green-600 dark:text-green-400'
+                    : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
+                }`}
+              >
+                Active
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, isActive: false })}
+                className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  !form.isActive
+                    ? 'bg-red-100 border-red-500 text-red-700 dark:bg-red-900/30 dark:border-red-600 dark:text-red-400'
+                    : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
+                }`}
+              >
+                Inactive
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Products</label>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {products.map((product) => (
+                <label key={product.id} className="flex items-center gap-2 p-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.productIds.includes(product.id)}
+                    onChange={() => handleProductToggle(product.id)}
+                    className="rounded border-slate-300 text-primary focus:ring-primary"
+                  />
+                  <span className="text-sm text-slate-700 dark:text-slate-300">{product.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-purple-600 text-white px-6 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-lg">save</span>
+              {loading ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </form>

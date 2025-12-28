@@ -23,14 +23,19 @@ const storage = multer.diskStorage({
   },
 })
 
-// File filter - accept only images
+// File filter - accept images and videos
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml']
+  const allowedTypes = [
+    // Images
+    'image/jpeg', 'image/png', 'image/gif', 'image/svg+xml',
+    // Videos
+    'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-ms-wmv'
+  ]
 
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true)
   } else {
-    cb(new Error('Invalid file type. Only JPG, PNG, GIF, and SVG are allowed.'))
+    cb(new Error('Invalid file type. Only images (JPG, PNG, GIF, SVG) and videos (MP4, WebM, MOV, AVI, WMV) are allowed.'))
   }
 }
 
@@ -39,7 +44,7 @@ export const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB max per file
+    fileSize: 50 * 1024 * 1024, // 50MB max per file (for video support)
     files: 5, // Max 5 files
   },
 })

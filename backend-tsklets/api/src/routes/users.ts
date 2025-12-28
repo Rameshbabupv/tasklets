@@ -439,6 +439,77 @@ userRoutes.post('/company', requireCompanyAdmin, async (req, res) => {
   }
 })
 
+// Update user in company (company_admin can update users in their company)
+userRoutes.patch('/company/:id', requireCompanyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { name, role, productIds, isActive } = req.body
+    const { tenantId, clientId } = req.user!
+    const userId = parseInt(id)
+
+    if (!clientId) {
+      return res.status(400).json({ error: 'Company admin must be associated with a client' })
+    }
+
+    // Verify user belongs to same company
+    const [targetUser] = await db.select().from(users)
+      .where(and(
+        eq(users.id, userId),
+        eq(users.tenantId, tenantId),
+        eq(users.clientId, clientId)
+      ))
+      .limit(1)
+
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found or access denied' })
+    }
+
+    // Validate role: can only set 'user' or 'company_admin'
+    if (role && !['user', 'company_admin'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role. Can only set user or company_admin' })
+    }
+
+    // Build update object
+    const updateData: any = {}
+    if (name !== undefined) updateData.name = name
+    if (role !== undefined) updateData.role = role
+    if (isActive !== undefined) updateData.isActive = isActive
+
+    // Update user
+    const [updatedUser] = await db.update(users)
+      .set(updateData)
+      .where(eq(users.id, userId))
+      .returning()
+
+    // Update product assignments if provided
+    if (productIds !== undefined && Array.isArray(productIds)) {
+      // Delete existing assignments
+      await db.delete(userProducts).where(eq(userProducts.userId, userId))
+
+      // Create new assignments
+      if (productIds.length > 0) {
+        const values = productIds.map((productId: number) => ({
+          userId,
+          productId,
+          tenantId,
+        }))
+        await db.insert(userProducts).values(values)
+      }
+    }
+
+    res.json({
+      id: updatedUser.id,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      role: updatedUser.role,
+      isActive: updatedUser.isActive,
+    })
+  } catch (error) {
+    console.error('Update company user error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 // Reset user password to Systech@123
 userRoutes.patch('/:id/reset-password', requireCompanyAdmin, async (req, res) => {
   try {

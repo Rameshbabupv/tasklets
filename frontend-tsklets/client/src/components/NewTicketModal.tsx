@@ -30,9 +30,12 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
     title: '',
     description: '',
     productId: 0,
+    type: 'support' as 'support' | 'feature_request',
     clientPriority: 3,
     clientSeverity: 3,
   })
+
+  const isCompanyAdmin = user?.role === 'company_admin'
 
   useEffect(() => {
     if (!isOpen) return
@@ -100,6 +103,7 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
         title: '',
         description: '',
         productId: products.length === 1 ? products[0].id : 0,
+        type: 'support',
         clientPriority: 3,
         clientSeverity: 3,
       })
@@ -111,13 +115,19 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
     const validFiles = files.filter((file) => {
-      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml']
+      const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml']
+      const videoTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/x-ms-wmv']
+      const validTypes = [...imageTypes, ...videoTypes]
+      const isVideo = videoTypes.includes(file.type)
+
       if (!validTypes.includes(file.type)) {
-        toast.error(`${file.name}: Invalid file type. Only JPG, PNG, GIF, and SVG are allowed.`)
+        toast.error(`${file.name}: Invalid file type. Only images and videos are allowed.`)
         return false
       }
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error(`${file.name}: File too large. Maximum size is 5MB.`)
+      // 50MB limit for videos, 5MB for images
+      const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024
+      if (file.size > maxSize) {
+        toast.error(`${file.name}: File too large. Maximum ${isVideo ? '50MB' : '5MB'}.`)
         return false
       }
       return true
@@ -230,14 +240,26 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
                 <div style={{ borderBottomColor: 'var(--border-primary)', backgroundColor: 'var(--bg-card)' }} className="px-6 py-4 border-b bg-gradient-to-r from-white to-purple-50/30">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="size-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 text-white flex items-center justify-center shadow-lg">
-                        <span className="material-symbols-outlined text-xl" aria-hidden="true">confirmation_number</span>
+                      <div className={`size-10 rounded-xl text-white flex items-center justify-center shadow-lg ${
+                        form.type === 'feature_request'
+                          ? 'bg-gradient-to-br from-green-500 to-emerald-600'
+                          : 'bg-gradient-to-br from-primary to-purple-600'
+                      }`}>
+                        <span className="material-symbols-outlined text-xl" aria-hidden="true">
+                          {form.type === 'feature_request' ? 'lightbulb' : 'confirmation_number'}
+                        </span>
                       </div>
                       <div>
-                        <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                          New Support Ticket
+                        <h2 className={`text-xl font-bold bg-clip-text text-transparent ${
+                          form.type === 'feature_request'
+                            ? 'bg-gradient-to-r from-green-500 to-emerald-600'
+                            : 'bg-gradient-to-r from-primary to-purple-600'
+                        }`}>
+                          {form.type === 'feature_request' ? 'New Feature Request' : 'New Support Ticket'}
                         </h2>
-                        <p style={{ color: 'var(--text-secondary)' }} className="text-sm">Submit a new issue to our team</p>
+                        <p style={{ color: 'var(--text-secondary)' }} className="text-sm">
+                          {form.type === 'feature_request' ? 'Submit a new idea or enhancement' : 'Submit a new issue to our team'}
+                        </p>
                       </div>
                     </div>
                     <motion.button
@@ -256,6 +278,59 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
                 {/* Form Content - Scrollable */}
                 <div className="flex-1 overflow-y-auto px-6 py-6">
                   <form onSubmit={handleSubmit} id="new-ticket-form" className="space-y-6">
+                    {/* Ticket Type - Only for company_admin */}
+                    {isCompanyAdmin && (
+                      <div>
+                        <label htmlFor="type" style={{ color: 'var(--text-secondary)' }} className="block text-sm font-semibold mb-2">
+                          Ticket Type *
+                        </label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setForm({ ...form, type: 'support' })}
+                            className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+                              form.type === 'support'
+                                ? 'border-primary bg-primary/5'
+                                : 'border-slate-200 dark:border-slate-600 hover:border-slate-300'
+                            }`}
+                          >
+                            <div className={`size-10 rounded-lg flex items-center justify-center ${
+                              form.type === 'support'
+                                ? 'bg-gradient-to-br from-primary to-purple-600 text-white'
+                                : 'bg-slate-100 dark:bg-slate-700 text-slate-500'
+                            }`}>
+                              <span className="material-symbols-outlined">confirmation_number</span>
+                            </div>
+                            <div className="text-left">
+                              <p className={`font-semibold ${form.type === 'support' ? 'text-primary' : ''}`} style={{ color: form.type === 'support' ? undefined : 'var(--text-primary)' }}>Support</p>
+                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Report an issue</p>
+                            </div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setForm({ ...form, type: 'feature_request' })}
+                            className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+                              form.type === 'feature_request'
+                                ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                                : 'border-slate-200 dark:border-slate-600 hover:border-slate-300'
+                            }`}
+                          >
+                            <div className={`size-10 rounded-lg flex items-center justify-center ${
+                              form.type === 'feature_request'
+                                ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white'
+                                : 'bg-slate-100 dark:bg-slate-700 text-slate-500'
+                            }`}>
+                              <span className="material-symbols-outlined">lightbulb</span>
+                            </div>
+                            <div className="text-left">
+                              <p className={`font-semibold ${form.type === 'feature_request' ? 'text-green-600' : ''}`} style={{ color: form.type === 'feature_request' ? undefined : 'var(--text-primary)' }}>Feature Request</p>
+                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Suggest an idea</p>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Subject */}
                     <div>
                       <label htmlFor="title" style={{ color: 'var(--text-secondary)' }} className="block text-sm font-semibold mb-2">
@@ -266,7 +341,7 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
                         type="text"
                         value={form.title}
                         onChange={(e) => setForm({ ...form, title: e.target.value })}
-                        placeholder="Briefly summarize the issue (e.g. Login page timeout)"
+                        placeholder={form.type === 'feature_request' ? 'Briefly describe your feature idea' : 'Briefly summarize the issue (e.g. Login page timeout)'}
                         required
                         style={{
                           color: 'var(--text-primary)',
@@ -393,7 +468,7 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
                       <input
                         ref={fileInputRef}
                         type="file"
-                        accept="image/jpeg,image/png,image/gif,image/svg+xml"
+                        accept="image/jpeg,image/png,image/gif,image/svg+xml,video/mp4,video/webm,video/quicktime,.mov,.avi,.wmv"
                         multiple
                         onChange={handleFileSelect}
                         className="hidden"
@@ -404,35 +479,45 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
                         className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary hover:bg-slate-50 transition-all"
                       >
                         <span style={{ color: 'var(--text-muted)' }} className="material-symbols-outlined text-3xl mb-2" aria-hidden="true">cloud_upload</span>
-                        <p style={{ color: 'var(--text-secondary)' }} className="text-sm font-medium">Click to upload</p>
-                        <p style={{ color: 'var(--text-muted)' }} className="text-xs">PNG, JPG, GIF, SVG (max. 5 files, 5MB each)</p>
+                        <p style={{ color: 'var(--text-secondary)' }} className="text-sm font-medium">Click to upload images or videos</p>
+                        <p style={{ color: 'var(--text-muted)' }} className="text-xs">Images: 5MB max | Videos: 50MB max (5 files total)</p>
                       </div>
 
                       {/* Selected Files */}
                       {selectedFiles.length > 0 && (
                         <div className="mt-4 grid grid-cols-3 gap-3">
-                          {selectedFiles.map((file, index) => (
-                            <div key={index} className="relative group">
-                              <div
-                                onClick={() => setModalImage({ url: previewUrls[index], name: file.name, size: file.size })}
-                                style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)' }}
-                                className="aspect-square rounded-lg overflow-hidden border-2 cursor-pointer hover:border-primary transition-colors"
-                              >
-                                <img src={previewUrls[index]} alt={file.name} className="w-full h-full object-cover" />
+                          {selectedFiles.map((file, index) => {
+                            const isVideo = file.type.startsWith('video/')
+                            return (
+                              <div key={index} className="relative group">
+                                <div
+                                  onClick={() => !isVideo && setModalImage({ url: previewUrls[index], name: file.name, size: file.size })}
+                                  style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)' }}
+                                  className={`aspect-square rounded-lg overflow-hidden border-2 ${isVideo ? '' : 'cursor-pointer hover:border-primary'} transition-colors`}
+                                >
+                                  {isVideo ? (
+                                    <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-700">
+                                      <span className="material-symbols-outlined text-3xl text-slate-500 mb-1">videocam</span>
+                                      <span className="text-xs text-slate-500">Video</span>
+                                    </div>
+                                  ) : (
+                                    <img src={previewUrls[index]} alt={file.name} className="w-full h-full object-cover" />
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveFile(index)}
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition-colors"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]" aria-hidden="true">close</span>
+                                </button>
+                                <p style={{ color: 'var(--text-secondary)' }} className="text-xs truncate mt-1" title={file.name}>
+                                  {file.name}
+                                </p>
+                                <p style={{ color: 'var(--text-muted)' }} className="text-xs">{formatFileSize(file.size)}</p>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveFile(index)}
-                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition-colors"
-                              >
-                                <span className="material-symbols-outlined text-[14px]" aria-hidden="true">close</span>
-                              </button>
-                              <p style={{ color: 'var(--text-secondary)' }} className="text-xs truncate mt-1" title={file.name}>
-                                {file.name}
-                              </p>
-                              <p style={{ color: 'var(--text-muted)' }} className="text-xs">{formatFileSize(file.size)}</p>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       )}
                     </div>
@@ -457,10 +542,16 @@ export default function NewTicketModal({ isOpen, onClose }: NewTicketModalProps)
                     disabled={loading}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-purple-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-all shadow-md hover:shadow-lg disabled:opacity-50"
+                    className={`inline-flex items-center gap-2 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-all shadow-md hover:shadow-lg disabled:opacity-50 ${
+                      form.type === 'feature_request'
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-600'
+                        : 'bg-gradient-to-r from-primary to-purple-600'
+                    }`}
                   >
-                    <span className="material-symbols-outlined text-lg" aria-hidden="true">send</span>
-                    {loading ? 'Submitting...' : 'Submit Ticket'}
+                    <span className="material-symbols-outlined text-lg" aria-hidden="true">
+                      {form.type === 'feature_request' ? 'lightbulb' : 'send'}
+                    </span>
+                    {loading ? 'Submitting...' : (form.type === 'feature_request' ? 'Submit Request' : 'Submit Ticket')}
                   </motion.button>
                 </div>
               </motion.div>
