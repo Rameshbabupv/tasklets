@@ -8,19 +8,19 @@ interface StatusBadgeProps {
 const statusConfig: Record<TicketStatus, { label: string; className: string }> = {
   open: {
     label: 'Open',
-    className: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+    className: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300',
   },
   in_progress: {
     label: 'In Progress',
-    className: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
+    className: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
   },
   resolved: {
     label: 'Resolved',
-    className: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
+    className: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300',
   },
   closed: {
     label: 'Closed',
-    className: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+    className: 'bg-slate-100 text-slate-600 dark:bg-slate-500/20 dark:text-slate-300',
   },
 }
 
