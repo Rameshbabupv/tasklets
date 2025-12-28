@@ -61,9 +61,10 @@ export default function Requirements() {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
-      setProducts(data.products || [])
-      if (data.products && data.products.length > 0) {
-        setSelectedProduct(data.products[0].id)
+      const productsList = Array.isArray(data) ? data : []
+      setProducts(productsList)
+      if (productsList.length > 0) {
+        setSelectedProduct(productsList[0].id)
       }
     } catch (error) {
       console.error('Fetch products error:', error)
