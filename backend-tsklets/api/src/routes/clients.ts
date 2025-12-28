@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { nanoid } from 'nanoid'
 import { db } from '../db/index.js'
-import { clients, users } from '../db/schema.js'
+import { clients, users, clientProducts } from '../db/schema.js'
 import { eq, and, count } from 'drizzle-orm'
 import { authenticate, requireInternal } from '../middleware/auth.js'
 
@@ -15,10 +15,26 @@ clientRoutes.get('/', requireInternal, async (req, res) => {
   try {
     const { tenantId } = req.user!
 
-    const results = await db.select().from(clients)
-      .where(eq(clients.tenantId, tenantId))
+    // Fetch clients with their products
+    const results = await db.query.clients.findMany({
+      where: eq(clients.tenantId, tenantId),
+      with: {
+        clientProducts: {
+          with: {
+            product: true,
+          },
+        },
+      },
+    })
 
-    res.json({ clients: results })
+    // Transform to include products array
+    const clientsWithProducts = results.map((client: any) => ({
+      ...client,
+      products: client.clientProducts?.map((cp: any) => cp.product) || [],
+      clientProducts: undefined, // Remove the join table data
+    }))
+
+    res.json({ clients: clientsWithProducts })
   } catch (error) {
     console.error('List clients error:', error)
     res.status(500).json({ error: 'Internal server error' })

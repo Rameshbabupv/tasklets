@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { db } from '../db/index.js'
-import { products, clientProducts, epics, features, devTasks } from '../db/schema.js'
+import { products, clientProducts, clients, epics, features, devTasks } from '../db/schema.js'
 import { eq } from 'drizzle-orm'
 import { authenticate, requireInternal } from '../middleware/auth.js'
 
@@ -109,6 +109,59 @@ productRoutes.get('/tenant/:tenantId', async (req, res) => {
     res.json(productList)
   } catch (error) {
     console.error('Get tenant products error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Get products for a client
+productRoutes.get('/client/:clientId', async (req, res) => {
+  try {
+    const { clientId } = req.params
+    const cid = parseInt(clientId)
+
+    const assigned = await db.query.clientProducts.findMany({
+      where: eq(clientProducts.clientId, cid),
+      with: {
+        product: true,
+      },
+    })
+
+    const productList = assigned.map((tp: any) => tp.product)
+    res.json(productList)
+  } catch (error) {
+    console.error('Get client products error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Update products for a client (replace all assignments)
+productRoutes.put('/client/:clientId', requireInternal, async (req, res) => {
+  try {
+    const { clientId } = req.params
+    const { productIds } = req.body
+    const { tenantId } = req.user!
+    const cid = parseInt(clientId)
+
+    if (!productIds || !Array.isArray(productIds)) {
+      return res.status(400).json({ error: 'productIds array required' })
+    }
+
+    // Delete existing assignments for this client
+    await db.delete(clientProducts).where(eq(clientProducts.clientId, cid))
+
+    // Insert new assignments
+    if (productIds.length > 0) {
+      const assignments = productIds.map((productId: number) => ({
+        tenantId,
+        clientId: cid,
+        productId,
+      }))
+      await db.insert(clientProducts).values(assignments)
+    }
+
+    res.json({ message: 'Products updated', count: productIds.length })
+  } catch (error) {
+    console.error('Update client products error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

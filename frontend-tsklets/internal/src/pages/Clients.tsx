@@ -10,6 +10,7 @@ interface Client {
   gatekeeperEnabled: boolean
   isActive: boolean
   createdAt: string
+  products?: Array<{ id: number; name: string }>
 }
 
 interface Product {
@@ -260,6 +261,7 @@ export default function Clients() {
                   <tr>
                     <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Name</th>
                     <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Tier</th>
+                    <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Products</th>
                     <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Gatekeeper</th>
                     <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Created</th>
                     <th className="text-center px-6 py-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Status</th>
@@ -290,6 +292,22 @@ export default function Clients() {
                         <span className={`px-2 py-1 rounded text-xs font-semibold border ${tierColors[client.tier]}`}>
                           {client.tier}
                         </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {client.products && client.products.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 max-w-xs">
+                            {client.products.map((product) => (
+                              <span
+                                key={product.id}
+                                className="px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
+                              >
+                                {product.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>No products</span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
