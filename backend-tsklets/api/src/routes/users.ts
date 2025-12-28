@@ -258,6 +258,7 @@ userRoutes.put('/:id/products', requireInternal, async (req, res) => {
       const values = productIds.map((productId: number) => ({
         userId,
         productId,
+        tenantId,
       }))
       await db.insert(userProducts).values(values)
     }
