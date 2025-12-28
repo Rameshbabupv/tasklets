@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import { useAuthStore } from '../store/auth'
+import TicketModal from '../components/TicketModal'
 
 interface Ticket {
   id: string
@@ -48,6 +48,7 @@ const priorityConfig: Record<number, { label: string; className: string; stripe:
 export default function SupportQueue() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedTicketKey, setSelectedTicketKey] = useState<string | null>(null)
   const { token } = useAuthStore()
 
   useEffect(() => {
@@ -158,10 +159,10 @@ export default function SupportQueue() {
                         const tConfig = typeConfig[ticket.type] || typeConfig.support
 
                         return (
-                          <Link
+                          <div
                             key={ticket.id}
-                            to={`/tickets/${ticket.issueKey}`}
-                            className="group p-4 rounded-lg shadow-sm border hover:shadow-md hover:border-blue-300 transition-all relative overflow-hidden"
+                            onClick={() => setSelectedTicketKey(ticket.issueKey)}
+                            className="group p-4 rounded-lg shadow-sm border hover:shadow-md hover:border-violet-300 transition-all relative overflow-hidden cursor-pointer"
                             style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}
                           >
                             {priority <= 2 && (
@@ -170,7 +171,7 @@ export default function SupportQueue() {
                             <div className="flex justify-between items-start mb-2">
                               <div className="flex items-center gap-2">
                                 <span className={`material-symbols-outlined text-[16px] ${tConfig.color}`}>{tConfig.icon}</span>
-                                <span className="text-xs font-mono font-semibold text-blue-600">{ticket.issueKey}</span>
+                                <span className="text-xs font-mono font-semibold text-violet-600 dark:text-violet-400">{ticket.issueKey}</span>
                               </div>
                               <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${pConfig.className}`}>
                                 P{priority}
@@ -180,7 +181,7 @@ export default function SupportQueue() {
                             <div className="flex items-center justify-between border-t pt-3 mt-3" style={{ borderColor: 'var(--border-secondary)' }}>
                               <div className="flex items-center gap-2">
                                 {ticket.clientName && (
-                                  <span className="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-600">{ticket.clientName}</span>
+                                  <span className="text-xs px-2 py-0.5 rounded bg-violet-50 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400">{ticket.clientName}</span>
                                 )}
                                 {ticket.creatorName && (
                                   <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{ticket.creatorName}</span>
@@ -191,7 +192,7 @@ export default function SupportQueue() {
                                 {new Date(ticket.createdAt).toLocaleDateString()}
                               </div>
                             </div>
-                          </Link>
+                          </div>
                         )
                       })}
 
@@ -206,6 +207,15 @@ export default function SupportQueue() {
           )}
         </div>
       </main>
+
+      {/* Ticket Detail Modal */}
+      {selectedTicketKey && (
+        <TicketModal
+          issueKey={selectedTicketKey}
+          onClose={() => setSelectedTicketKey(null)}
+          onStatusChange={fetchTickets}
+        />
+      )}
     </div>
   )
 }
