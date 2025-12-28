@@ -5,6 +5,7 @@ export { Input } from './Input'
 export { StatusBadge } from './StatusBadge'
 export { PriorityPill } from './PriorityPill'
 export { Avatar } from './Avatar'
+export { UserManagementModal } from './UserManagementModal'
 
 // Design tokens (from Stitch mockups)
 export const tokens = {
