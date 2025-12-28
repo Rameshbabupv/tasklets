@@ -28,6 +28,7 @@ ticketRoutes.get('/all', requireInternal, async (req, res) => {
       id: t.id,
       title: t.title,
       description: t.description,
+      type: t.type || 'support',
       status: t.status,
       clientPriority: t.clientPriority,
       clientSeverity: t.clientSeverity,
@@ -99,7 +100,7 @@ ticketRoutes.get('/', async (req, res) => {
       results = await db.select().from(tickets)
         .where(and(
           eq(tickets.tenantId, tenantId),
-          eq(tickets.userId, userId)
+          eq(tickets.createdBy, userId)
         ))
         .orderBy(desc(tickets.createdAt))
     }
@@ -137,7 +138,7 @@ ticketRoutes.get('/:id', async (req, res) => {
         }
       } else {
         // Regular users can only see their own tickets
-        if (ticket.userId !== userId) {
+        if (ticket.createdBy !== userId) {
           return res.status(403).json({ error: 'Forbidden' })
         }
       }
@@ -223,6 +224,7 @@ ticketRoutes.post('/:id/comments', async (req, res) => {
 
     // Only internal users can add internal notes
     const [comment] = await db.insert(ticketComments).values({
+      tenantId,
       ticketId: parseInt(id),
       userId,
       content,
@@ -260,7 +262,7 @@ ticketRoutes.post('/:id/attachments', upload.array('files', 5), async (req, res)
     }
 
     // Access check: internal users, ticket creator, or same client
-    if (!isInternal && ticket.userId !== userId && ticket.clientId !== clientId) {
+    if (!isInternal && ticket.createdBy !== userId && ticket.clientId !== clientId) {
       return res.status(403).json({ error: 'Forbidden' })
     }
 

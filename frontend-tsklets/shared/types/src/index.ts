@@ -46,12 +46,14 @@ export interface Ticket {
   id: number
   title: string
   description?: string
+  type?: 'support' | 'feature_request'
   status: TicketStatus
   clientPriority: number
   clientSeverity: number
   internalPriority?: number
   internalSeverity?: number
   productId?: number
+  productName?: string
   userId: number
   assignedTo?: number
   integratorId?: number

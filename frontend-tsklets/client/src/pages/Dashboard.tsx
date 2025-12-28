@@ -256,10 +256,11 @@ export default function Dashboard() {
             <>
               {/* Desktop Table View */}
               <table className="w-full hidden md:table">
-                <thead style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-                  <tr className="text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                <thead className="bg-slate-100 dark:bg-slate-700">
+                  <tr className="text-left text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-200">
                     <th className="px-6 py-4">ID</th>
                     <th className="px-6 py-4">Subject</th>
+                    <th className="px-6 py-4">Type</th>
                     <th className="px-6 py-4">Status</th>
                     <th className="px-6 py-4">Priority</th>
                     <th className="px-6 py-4">Date</th>
@@ -283,6 +284,15 @@ export default function Dashboard() {
                         >
                           {ticket.title}
                         </Link>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+                          ticket.type === 'feature_request'
+                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
+                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                        }`}>
+                          {ticket.type === 'feature_request' ? '✨ Feature' : '🎫 Support'}
+                        </span>
                       </td>
                       <td className="px-6 py-4">
                         <StatusBadge status={ticket.status} />
@@ -313,12 +323,21 @@ export default function Dashboard() {
                     >
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-sm mb-1 truncate" style={{ color: 'var(--text-primary)' }}>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                              ticket.type === 'feature_request'
+                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
+                                : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                            }`}>
+                              {ticket.type === 'feature_request' ? '✨' : '🎫'}
+                            </span>
+                            <p className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
+                              #{ticket.id}
+                            </p>
+                          </div>
+                          <h3 className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
                             {ticket.title}
                           </h3>
-                          <p className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
-                            #{ticket.id}
-                          </p>
                         </div>
                         <StatusBadge status={ticket.status} />
                       </div>
