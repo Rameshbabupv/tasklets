@@ -345,7 +345,7 @@ userRoutes.get('/company', requireCompanyAdmin, async (req, res) => {
         createdAt: true,
       },
       with: {
-        products: {
+        userProducts: {
           with: {
             product: true,
           },
@@ -362,7 +362,7 @@ userRoutes.get('/company', requireCompanyAdmin, async (req, res) => {
       isActive: user.isActive,
       requirePasswordChange: user.requirePasswordChange,
       createdAt: user.createdAt,
-      products: user.products?.map((up: any) => up.product) || [],
+      products: user.userProducts?.map((up: any) => up.product) || [],
     }))
 
     res.json(formatted)

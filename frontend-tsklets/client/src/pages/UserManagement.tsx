@@ -41,9 +41,15 @@ export default function UserManagement() {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
-      setUsers(data)
+      if (res.ok && Array.isArray(data)) {
+        setUsers(data)
+      } else {
+        console.error('Failed to fetch users:', data.error || 'Unknown error')
+        setUsers([])
+      }
     } catch (err) {
       console.error('Failed to fetch users:', err)
+      setUsers([])
     } finally {
       setLoading(false)
     }
