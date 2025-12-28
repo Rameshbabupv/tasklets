@@ -4,14 +4,30 @@ import Sidebar from '../components/Sidebar'
 import { useAuthStore } from '../store/auth'
 
 interface Ticket {
-  id: number
+  id: string
+  issueKey: string
   title: string
   description: string
+  type: string
   status: 'open' | 'in_progress' | 'resolved' | 'closed'
   clientPriority: number
   internalPriority: number | null
-  tenantName: string
+  clientName: string | null
+  productName: string | null
+  creatorName: string | null
   createdAt: string
+}
+
+// Type icons and colors
+const typeConfig: Record<string, { icon: string; color: string; bg: string }> = {
+  support: { icon: 'support_agent', color: 'text-orange-600', bg: 'bg-orange-50' },
+  bug: { icon: 'bug_report', color: 'text-red-600', bg: 'bg-red-50' },
+  task: { icon: 'task_alt', color: 'text-green-600', bg: 'bg-green-50' },
+  feature: { icon: 'auto_awesome', color: 'text-cyan-600', bg: 'bg-cyan-50' },
+  feature_request: { icon: 'lightbulb', color: 'text-yellow-600', bg: 'bg-yellow-50' },
+  epic: { icon: 'bolt', color: 'text-purple-600', bg: 'bg-purple-50' },
+  spike: { icon: 'science', color: 'text-indigo-600', bg: 'bg-indigo-50' },
+  note: { icon: 'note', color: 'text-slate-600', bg: 'bg-slate-50' },
 }
 
 const columns = [
@@ -139,11 +155,12 @@ export default function SupportQueue() {
                       {colTickets.map((ticket) => {
                         const priority = ticket.internalPriority || ticket.clientPriority || 3
                         const pConfig = priorityConfig[priority] || priorityConfig[3]
+                        const tConfig = typeConfig[ticket.type] || typeConfig.support
 
                         return (
                           <Link
                             key={ticket.id}
-                            to={`/tickets/${ticket.id}`}
+                            to={`/tickets/${ticket.issueKey}`}
                             className="group p-4 rounded-lg shadow-sm border hover:shadow-md hover:border-blue-300 transition-all relative overflow-hidden"
                             style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}
                           >
@@ -151,15 +168,24 @@ export default function SupportQueue() {
                               <div className={`absolute left-0 top-0 bottom-0 w-1 ${pConfig.stripe} rounded-l-lg`} />
                             )}
                             <div className="flex justify-between items-start mb-2">
-                              <span className="text-xs font-mono font-medium" style={{ color: 'var(--text-secondary)' }}>#{ticket.id}</span>
+                              <div className="flex items-center gap-2">
+                                <span className={`material-symbols-outlined text-[16px] ${tConfig.color}`}>{tConfig.icon}</span>
+                                <span className="text-xs font-mono font-semibold text-blue-600">{ticket.issueKey}</span>
+                              </div>
                               <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${pConfig.className}`}>
-                                {pConfig.label}
+                                P{priority}
                               </div>
                             </div>
-                            <h4 className="text-sm font-semibold mb-1 leading-snug" style={{ color: 'var(--text-primary)' }}>{ticket.title}</h4>
-                            <p className="text-xs mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>{ticket.description}</p>
-                            <div className="flex items-center justify-between border-t pt-3" style={{ borderColor: 'var(--border-secondary)' }}>
-                              <span className="text-xs px-2 py-0.5 rounded" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-tertiary)' }}>{ticket.tenantName}</span>
+                            <h4 className="text-sm font-semibold leading-snug line-clamp-2" style={{ color: 'var(--text-primary)' }}>{ticket.title}</h4>
+                            <div className="flex items-center justify-between border-t pt-3 mt-3" style={{ borderColor: 'var(--border-secondary)' }}>
+                              <div className="flex items-center gap-2">
+                                {ticket.clientName && (
+                                  <span className="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-600">{ticket.clientName}</span>
+                                )}
+                                {ticket.creatorName && (
+                                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>{ticket.creatorName}</span>
+                                )}
+                              </div>
                               <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-muted)' }}>
                                 <span className="material-symbols-outlined text-[14px]">schedule</span>
                                 {new Date(ticket.createdAt).toLocaleDateString()}
