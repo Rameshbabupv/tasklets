@@ -9,6 +9,48 @@ interface Product {
   description: string | null
 }
 
+// File type configuration
+const FILE_TYPES = {
+  images: {
+    mimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp'],
+    extensions: ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp'],
+    icon: 'image',
+    color: 'text-blue-500'
+  },
+  videos: {
+    mimeTypes: ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo'],
+    extensions: ['.mp4', '.mov', '.webm', '.avi'],
+    icon: 'video_file',
+    color: 'text-purple-500'
+  },
+  documents: {
+    mimeTypes: ['application/pdf', 'text/plain', 'application/zip', 'application/x-zip-compressed'],
+    extensions: ['.pdf', '.txt', '.log', '.zip'],
+    icon: 'description',
+    color: 'text-orange-500'
+  }
+}
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_FILES = 5
+
+const getFileTypeInfo = (file: File) => {
+  for (const [category, config] of Object.entries(FILE_TYPES)) {
+    if (config.mimeTypes.includes(file.type)) {
+      return { category, ...config }
+    }
+  }
+  return { category: 'unknown', icon: 'insert_drive_file', color: 'text-gray-500' }
+}
+
+const getAllowedMimeTypes = () => {
+  return Object.values(FILE_TYPES).flatMap(t => t.mimeTypes)
+}
+
+const getFileTypeLabel = () => {
+  return 'Images (JPG, PNG, GIF, SVG), Videos (MP4, MOV, WEBM, AVI), or Documents (PDF, TXT, LOG, ZIP)'
+}
+
 export default function NewTicket() {
   const { token, user } = useAuthStore()
   const navigate = useNavigate()
@@ -19,6 +61,7 @@ export default function NewTicket() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [previewUrls, setPreviewUrls] = useState<string[]>([])
   const [modalImage, setModalImage] = useState<{ url: string; name: string; size: number; type: string } | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -86,37 +129,69 @@ export default function NewTicket() {
     }
   }, [selectedFiles])
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-    const validFiles = files.filter((file) => {
-      // Validate file type
-      const validTypes = [
-        'image/jpeg', 'image/png', 'image/gif', 'image/svg+xml',
-        'video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo'
-      ]
-      if (!validTypes.includes(file.type)) {
-        alert(`${file.name}: Invalid file type. Only images (JPG, PNG, GIF, SVG) and videos (MP4, MOV, WEBM, AVI) are allowed.`)
-        return false
-      }
-      // Validate file size (10MB max)
-      if (file.size > 10 * 1024 * 1024) {
-        alert(`${file.name}: File too large. Maximum size is 10MB.`)
-        return false
-      }
-      return true
-    })
+  const validateAndAddFiles = (files: File[]) => {
+    const errors: string[] = []
+    const validFiles: File[] = []
 
-    // Check total count
-    if (selectedFiles.length + validFiles.length > 5) {
-      alert('Maximum 5 files allowed')
+    // Check total count first
+    if (selectedFiles.length + files.length > MAX_FILES) {
+      alert(`Maximum ${MAX_FILES} files allowed. You selected ${files.length} file(s), but you already have ${selectedFiles.length} file(s).`)
       return
     }
 
-    setSelectedFiles([...selectedFiles, ...validFiles])
+    files.forEach((file) => {
+      // Validate file type
+      const allowedTypes = getAllowedMimeTypes()
+      if (!allowedTypes.includes(file.type)) {
+        errors.push(`"${file.name}": Unsupported file type. Allowed: ${getFileTypeLabel()}`)
+        return
+      }
+
+      // Validate file size
+      if (file.size > MAX_FILE_SIZE) {
+        errors.push(`"${file.name}": File too large (${formatFileSize(file.size)}). Maximum size is ${formatFileSize(MAX_FILE_SIZE)}.`)
+        return
+      }
+
+      validFiles.push(file)
+    })
+
+    // Show errors if any
+    if (errors.length > 0) {
+      alert('Some files could not be added:\n\n' + errors.join('\n'))
+    }
+
+    // Add valid files
+    if (validFiles.length > 0) {
+      setSelectedFiles([...selectedFiles, ...validFiles])
+    }
+
     // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    validateAndAddFiles(files)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const files = Array.from(e.dataTransfer.files)
+    validateAndAddFiles(files)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
   }
 
   const handleRemoveFile = (index: number) => {
@@ -359,23 +434,37 @@ export default function NewTicket() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/gif,image/svg+xml,video/mp4,video/quicktime,video/webm,video/x-msvideo"
+              accept={getAllowedMimeTypes().join(',')}
               multiple
               onChange={handleFileSelect}
               className="hidden"
             />
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors"
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${
+                isDragging ? 'border-primary bg-blue-50 dark:bg-blue-950/20 scale-[1.02]' : ''
+              }`}
               style={{
-                borderColor: 'var(--border-primary)',
-                backgroundColor: 'var(--bg-tertiary)',
+                borderColor: isDragging ? 'var(--primary)' : 'var(--border-primary)',
+                backgroundColor: isDragging ? 'var(--bg-hover)' : 'var(--bg-tertiary)',
                 color: 'var(--text-secondary)',
               }}
             >
-              <span className="material-symbols-outlined text-4xl mb-2" style={{ color: 'var(--text-muted)' }}>cloud_upload</span>
-              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Click to upload</p>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Images (JPG, PNG, GIF, SVG) or Videos (MP4, MOV, WEBM, AVI) • Max 5 files, 10MB each</p>
+              <span
+                className={`material-symbols-outlined text-4xl mb-2 transition-colors ${isDragging ? 'text-primary' : ''}`}
+                style={{ color: isDragging ? 'var(--primary)' : 'var(--text-muted)' }}
+              >
+                {isDragging ? 'upload' : 'cloud_upload'}
+              </span>
+              <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+                {isDragging ? 'Drop files here' : 'Click or drag files to upload'}
+              </p>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                {getFileTypeLabel()} • Max {MAX_FILES} files, {formatFileSize(MAX_FILE_SIZE)} each
+              </p>
             </div>
 
             {/* Selected Files - Thumbnail Grid */}
@@ -383,18 +472,27 @@ export default function NewTicket() {
               <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {selectedFiles.map((file, index) => {
                   const isVideo = file.type.startsWith('video/')
+                  const isImage = file.type.startsWith('image/')
+                  const fileTypeInfo = getFileTypeInfo(file)
+
                   return (
                     <div key={index} className="relative group">
                       {/* Thumbnail */}
                       <div
-                        onClick={() => setModalImage({ url: previewUrls[index], name: file.name, size: file.size, type: file.type })}
-                        className="aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-colors relative"
+                        onClick={() => isImage || isVideo ? setModalImage({ url: previewUrls[index], name: file.name, size: file.size, type: file.type }) : null}
+                        className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors relative ${isImage || isVideo ? 'cursor-pointer' : 'cursor-default'}`}
                         style={{
                           backgroundColor: 'var(--bg-tertiary)',
                           borderColor: 'var(--border-primary)',
                         }}
                       >
-                        {isVideo ? (
+                        {isImage ? (
+                          <img
+                            src={previewUrls[index]}
+                            alt={file.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : isVideo ? (
                           <>
                             <video
                               src={previewUrls[index]}
@@ -409,11 +507,18 @@ export default function NewTicket() {
                             </div>
                           </>
                         ) : (
-                          <img
-                            src={previewUrls[index]}
-                            alt={file.name}
-                            className="w-full h-full object-cover"
-                          />
+                          /* Document/File Icon */
+                          <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                            <span className={`material-symbols-outlined text-5xl ${fileTypeInfo.color}`}>
+                              {fileTypeInfo.icon}
+                            </span>
+                            <span className="text-xs font-mono uppercase px-2 py-1 rounded" style={{
+                              backgroundColor: 'var(--bg-card)',
+                              color: 'var(--text-secondary)'
+                            }}>
+                              {file.name.split('.').pop()}
+                            </span>
+                          </div>
                         )}
                       </div>
 
@@ -428,11 +533,15 @@ export default function NewTicket() {
 
                       {/* File info */}
                       <div className="mt-1">
-                        <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }} title={file.name}>
-                          {file.name}
-                        </p>
+                        <div className="flex items-center gap-1">
+                          <span className={`material-symbols-outlined text-xs ${fileTypeInfo.color}`}>
+                            {fileTypeInfo.icon}
+                          </span>
+                          <p className="text-xs truncate flex-1" style={{ color: 'var(--text-secondary)' }} title={file.name}>
+                            {file.name}
+                          </p>
+                        </div>
                         <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                          {isVideo && <span className="mr-1">🎥</span>}
                           {formatFileSize(file.size)}
                         </p>
                       </div>
