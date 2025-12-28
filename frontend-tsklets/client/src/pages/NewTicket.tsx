@@ -423,13 +423,6 @@ export default function NewTicket() {
             style={{ borderColor: 'var(--border-primary)' }}
           >
             <button
-              type="button"
-              className="px-4 py-2 text-sm font-medium hover:text-primary transition-colors"
-              style={{ color: 'var(--text-secondary)' }}
-            >
-              Save as Draft
-            </button>
-            <button
               type="submit"
               disabled={loading}
               className="inline-flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50"
