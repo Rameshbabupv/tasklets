@@ -131,7 +131,7 @@ export default function Dashboard() {
           className="mb-8"
         >
           <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Quick Access</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${user?.role === 'company_admin' ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4 sm:gap-6`}>
             <div onClick={() => setShowNewTicketModal(true)} className="cursor-pointer">
               <ModuleCard
                 emoji="🎫"
@@ -152,6 +152,16 @@ export default function Dashboard() {
               badge={stats.open > 0 ? 'Active' : undefined}
               badgeColor={stats.open > 5 ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}
             />
+            {user?.role === 'company_admin' && (
+              <ModuleCard
+                emoji="👥"
+                title="User Management"
+                description="Create and manage users in your organization"
+                to="/users"
+                badge="Admin Only"
+                badgeColor="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+              />
+            )}
             <ModuleCard
               emoji="📚"
               title="Knowledge Base"

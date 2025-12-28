@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import MyTickets from './pages/MyTickets'
 import NewTicket from './pages/NewTicket'
 import TicketDetail from './pages/TicketDetail'
+import UserManagement from './pages/UserManagement'
 import DevUserSwitcher from './components/DevUserSwitcher'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -56,6 +57,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <TicketDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute>
+              <UserManagement />
             </ProtectedRoute>
           }
         />
