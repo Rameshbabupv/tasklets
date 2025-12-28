@@ -21,6 +21,9 @@ import Roadmap from './pages/Roadmap'
 import Requirements from './pages/Requirements'
 import RequirementDetail from './pages/RequirementDetail'
 import DevUserSwitcher from './components/DevUserSwitcher'
+import CreateHub from './components/CreateHub'
+import CreateFAB from './components/CreateFAB'
+import { Toaster } from 'sonner'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user } = useAuthStore()
@@ -79,6 +82,9 @@ export default function App() {
         <Route path="/requirements/:id" element={<PrivateRoute><RequirementDetail /></PrivateRoute>} />
       </Routes>
       <DevUserSwitcher />
+      <CreateHub />
+      <CreateFAB />
+      <Toaster position="top-right" richColors />
     </BrowserRouter>
   )
 }
