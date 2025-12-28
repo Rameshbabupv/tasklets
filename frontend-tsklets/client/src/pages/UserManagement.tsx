@@ -26,23 +26,14 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
-  // Check if user is company_admin
-  if (currentUser?.role !== 'company_admin') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">Access Denied</h1>
-          <p className="text-slate-600 dark:text-slate-400">You must be a company admin to access this page.</p>
-          <Link to="/" className="text-primary hover:underline mt-4 inline-block">Go to Dashboard</Link>
-        </div>
-      </div>
-    )
-  }
+  const isCompanyAdmin = currentUser?.role === 'company_admin'
 
   useEffect(() => {
-    fetchUsers()
-    fetchProducts()
-  }, [])
+    if (isCompanyAdmin) {
+      fetchUsers()
+      fetchProducts()
+    }
+  }, [isCompanyAdmin])
 
   const fetchUsers = async () => {
     try {
@@ -91,6 +82,19 @@ export default function UserManagement() {
     } catch (err: any) {
       alert(err.message)
     }
+  }
+
+  // Check if user is company_admin (after all hooks)
+  if (!isCompanyAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Access Denied</h1>
+          <p style={{ color: 'var(--text-secondary)' }}>You must be a company admin to access this page.</p>
+          <Link to="/" className="text-primary hover:underline mt-4 inline-block">Go to Dashboard</Link>
+        </div>
+      </div>
+    )
   }
 
   return (
