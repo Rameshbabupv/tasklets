@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { useEffect, useState, useMemo } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { useAuthStore } from '../store/auth'
 import ThemeToggle from '../components/ThemeToggle'
@@ -9,6 +9,7 @@ interface Ticket {
   id: number
   issueKey: string
   subject: string
+  description: string
   status: string
   priority: string
   severity: string
@@ -31,15 +32,48 @@ const priorityColors: Record<string, string> = {
   P4: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600',
 }
 
+const ITEMS_PER_PAGE = 20
+
 export default function MyTickets() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { token, user, logout } = useAuthStore()
+
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
+  const [showFilters, setShowFilters] = useState(false)
+
+  // Filter state from URL params
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all')
+  const [priorityFilter, setPriorityFilter] = useState(searchParams.get('priority') || 'all')
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
+  const [currentPage, setCurrentPage] = useState(parseInt(searchParams.get('page') || '1'))
+
+  // Debounced search
+  const [searchInput, setSearchInput] = useState(searchQuery)
 
   useEffect(() => {
     fetchTickets()
   }, [])
+
+  // Update URL params when filters change
+  useEffect(() => {
+    const params: Record<string, string> = {}
+    if (statusFilter !== 'all') params.status = statusFilter
+    if (priorityFilter !== 'all') params.priority = priorityFilter
+    if (searchQuery) params.search = searchQuery
+    if (currentPage > 1) params.page = currentPage.toString()
+    setSearchParams(params)
+  }, [statusFilter, priorityFilter, searchQuery, currentPage])
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchInput)
+      setCurrentPage(1) // Reset to first page on search
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchInput])
 
   async function fetchTickets() {
     setLoading(true)
@@ -58,6 +92,61 @@ export default function MyTickets() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Filter and search logic
+  const filteredTickets = useMemo(() => {
+    return tickets.filter(ticket => {
+      // Status filter
+      if (statusFilter !== 'all' && ticket.status !== statusFilter) {
+        return false
+      }
+
+      // Priority filter
+      if (priorityFilter !== 'all' && ticket.priority !== priorityFilter) {
+        return false
+      }
+
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase()
+        const matchSubject = ticket.subject.toLowerCase().includes(query)
+        const matchDescription = ticket.description?.toLowerCase().includes(query)
+        const matchIssueKey = ticket.issueKey.toLowerCase().includes(query)
+        if (!matchSubject && !matchDescription && !matchIssueKey) {
+          return false
+        }
+      }
+
+      return true
+    })
+  }, [tickets, statusFilter, priorityFilter, searchQuery])
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredTickets.length / ITEMS_PER_PAGE)
+  const paginatedTickets = filteredTickets.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  )
+
+  // Active filter count
+  const activeFilterCount = [
+    statusFilter !== 'all',
+    priorityFilter !== 'all',
+    searchQuery !== ''
+  ].filter(Boolean).length
+
+  function clearFilters() {
+    setStatusFilter('all')
+    setPriorityFilter('all')
+    setSearchInput('')
+    setSearchQuery('')
+    setCurrentPage(1)
+  }
+
+  function handlePageChange(page: number) {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   function formatDate(dateString: string) {
@@ -118,12 +207,134 @@ export default function MyTickets() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Page Header */}
-        <div className="mb-6">
-          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-            View and manage all your support tickets
-          </p>
+        {/* Page Header with Filters Toggle */}
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              {filteredTickets.length} {filteredTickets.length === 1 ? 'ticket' : 'tickets'}
+              {searchQuery && ` matching "${searchQuery}"`}
+            </p>
+          </div>
+
+          {/* Mobile Filter Toggle Button */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className="md:hidden flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors"
+            style={{
+              backgroundColor: 'var(--bg-card)',
+              borderColor: 'var(--border-primary)',
+              color: 'var(--text-primary)'
+            }}
+          >
+            <span className="material-symbols-outlined text-lg">tune</span>
+            <span className="text-sm font-medium">Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="size-5 rounded-full bg-primary text-white text-xs flex items-center justify-center">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
         </div>
+
+        {/* Filters Panel */}
+        <AnimatePresence>
+          {(showFilters || window.innerWidth >= 768) && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="mb-6 overflow-hidden"
+            >
+              <div
+                className="p-4 rounded-lg border grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"
+                style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}
+              >
+                {/* Search Input */}
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                    Search
+                  </label>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
+                      search
+                    </span>
+                    <input
+                      type="text"
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      placeholder="Search by subject, description, or ID..."
+                      className="w-full pl-10 pr-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      style={{
+                        backgroundColor: 'var(--bg-primary)',
+                        borderColor: 'var(--border-primary)',
+                        color: 'var(--text-primary)'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Status Filter */}
+                <div>
+                  <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                    Status
+                  </label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1) }}
+                    className="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    style={{
+                      backgroundColor: 'var(--bg-primary)',
+                      borderColor: 'var(--border-primary)',
+                      color: 'var(--text-primary)'
+                    }}
+                  >
+                    <option value="all">All Status</option>
+                    <option value="open">Open</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </div>
+
+                {/* Priority Filter */}
+                <div>
+                  <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                    Priority
+                  </label>
+                  <select
+                    value={priorityFilter}
+                    onChange={(e) => { setPriorityFilter(e.target.value); setCurrentPage(1) }}
+                    className="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    style={{
+                      backgroundColor: 'var(--bg-primary)',
+                      borderColor: 'var(--border-primary)',
+                      color: 'var(--text-primary)'
+                    }}
+                  >
+                    <option value="all">All Priorities</option>
+                    <option value="P1">P1 - Critical</option>
+                    <option value="P2">P2 - High</option>
+                    <option value="P3">P3 - Medium</option>
+                    <option value="P4">P4 - Low</option>
+                  </select>
+                </div>
+
+                {/* Clear Filters Button */}
+                {activeFilterCount > 0 && (
+                  <div className="md:col-span-4 flex justify-end">
+                    <button
+                      onClick={clearFilters}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-lg">close</span>
+                      Clear All Filters
+                    </button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Loading State */}
         {loading && (
@@ -137,7 +348,7 @@ export default function MyTickets() {
           </div>
         )}
 
-        {/* Empty State */}
+        {/* Empty State - No Tickets at All */}
         {!loading && tickets.length === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -165,12 +376,45 @@ export default function MyTickets() {
           </motion.div>
         )}
 
+        {/* Empty State - No Results After Filtering */}
+        {!loading && tickets.length > 0 && filteredTickets.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-12"
+          >
+            <div className="size-16 mx-auto mb-4 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+              <span className="material-symbols-outlined text-3xl text-slate-400">
+                search_off
+              </span>
+            </div>
+            <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+              No tickets match your filters
+            </h3>
+            <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
+              Try adjusting your filters or search term
+            </p>
+            <button
+              onClick={clearFilters}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg border hover:border-primary transition-colors"
+              style={{
+                backgroundColor: 'var(--bg-card)',
+                borderColor: 'var(--border-primary)',
+                color: 'var(--text-primary)'
+              }}
+            >
+              <span className="material-symbols-outlined text-lg">close</span>
+              Clear Filters
+            </button>
+          </motion.div>
+        )}
+
         {/* Tickets List - Mobile: Cards, Desktop: Table */}
-        {!loading && tickets.length > 0 && (
+        {!loading && paginatedTickets.length > 0 && (
           <>
             {/* Mobile Cards (< 768px) */}
             <div className="block md:hidden space-y-3">
-              {tickets.map((ticket, index) => (
+              {paginatedTickets.map((ticket, index) => (
                 <motion.div
                   key={ticket.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -210,7 +454,7 @@ export default function MyTickets() {
             </div>
 
             {/* Desktop Table (>= 768px) */}
-            <div className="hidden md:block overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto mb-6">
               <table className="w-full">
                 <thead>
                   <tr className="border-b" style={{ borderColor: 'var(--border-primary)' }}>
@@ -235,7 +479,7 @@ export default function MyTickets() {
                   </tr>
                 </thead>
                 <tbody>
-                  {tickets.map((ticket, index) => (
+                  {paginatedTickets.map((ticket, index) => (
                     <motion.tr
                       key={ticket.id}
                       initial={{ opacity: 0 }}
@@ -285,6 +529,93 @@ export default function MyTickets() {
                 </tbody>
               </table>
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-between">
+                {/* Results Summary */}
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredTickets.length)} of {filteredTickets.length} tickets
+                </p>
+
+                {/* Pagination Controls */}
+                <div className="flex items-center gap-2">
+                  {/* Previous Button */}
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-2 rounded-lg border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                    style={{
+                      backgroundColor: 'var(--bg-card)',
+                      borderColor: 'var(--border-primary)',
+                      color: 'var(--text-primary)'
+                    }}
+                  >
+                    <span className="hidden sm:inline">Previous</span>
+                    <span className="sm:hidden material-symbols-outlined text-lg">chevron_left</span>
+                  </button>
+
+                  {/* Page Numbers (Desktop) */}
+                  <div className="hidden md:flex items-center gap-2">
+                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                      let pageNum
+                      if (totalPages <= 5) {
+                        pageNum = i + 1
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i
+                      } else {
+                        pageNum = currentPage - 2 + i
+                      }
+
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`size-10 rounded-lg border transition-colors ${
+                            currentPage === pageNum
+                              ? 'bg-primary text-white border-primary'
+                              : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+                          }`}
+                          style={
+                            currentPage !== pageNum
+                              ? {
+                                  backgroundColor: 'var(--bg-card)',
+                                  borderColor: 'var(--border-primary)',
+                                  color: 'var(--text-primary)'
+                                }
+                              : undefined
+                          }
+                        >
+                          {pageNum}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* Page Info (Mobile) */}
+                  <div className="md:hidden px-3 py-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    Page {currentPage} of {totalPages}
+                  </div>
+
+                  {/* Next Button */}
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-2 rounded-lg border disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                    style={{
+                      backgroundColor: 'var(--bg-card)',
+                      borderColor: 'var(--border-primary)',
+                      color: 'var(--text-primary)'
+                    }}
+                  >
+                    <span className="hidden sm:inline">Next</span>
+                    <span className="sm:hidden material-symbols-outlined text-lg">chevron_right</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </main>
