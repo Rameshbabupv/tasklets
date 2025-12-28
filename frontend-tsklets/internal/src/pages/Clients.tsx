@@ -6,6 +6,8 @@ import { UserManagementModal } from '@tsklets/ui'
 interface Client {
   id: number
   name: string
+  domain: string | null
+  type: 'owner' | 'customer' | 'partner'
   tier: 'enterprise' | 'business' | 'starter'
   gatekeeperEnabled: boolean
   isActive: boolean
@@ -25,6 +27,12 @@ const tierColors: Record<string, string> = {
   starter: 'bg-slate-100 text-slate-700 border-slate-200',
 }
 
+const typeConfig: Record<string, { label: string; className: string; icon: string }> = {
+  owner: { label: 'Owner', className: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400', icon: 'star' },
+  customer: { label: 'Customer', className: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400', icon: 'business' },
+  partner: { label: 'Partner', className: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400', icon: 'handshake' },
+}
+
 export default function Clients() {
   const [clients, setClients] = useState<Client[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -38,6 +46,8 @@ export default function Clients() {
 
   // Form state
   const [companyName, setCompanyName] = useState('')
+  const [domain, setDomain] = useState('')
+  const [clientType, setClientType] = useState<'owner' | 'customer' | 'partner'>('customer')
   const [tier, setTier] = useState<'enterprise' | 'business' | 'starter'>('starter')
   const [selectedProducts, setSelectedProducts] = useState<number[]>([])
   const [adminEmail, setAdminEmail] = useState('')
@@ -97,6 +107,8 @@ export default function Clients() {
 
   const resetForm = () => {
     setCompanyName('')
+    setDomain('')
+    setClientType('customer')
     setTier('starter')
     setSelectedProducts([])
     setAdminEmail('')
@@ -113,6 +125,8 @@ export default function Clients() {
   const openEditModal = async (client: Client) => {
     setEditingClient(client)
     setCompanyName(client.name)
+    setDomain(client.domain || '')
+    setClientType(client.type || 'customer')
     setTier(client.tier)
     await fetchClientProducts(client.id)
     setShowModal(true)
@@ -151,7 +165,7 @@ export default function Clients() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ name: companyName, tier }),
+          body: JSON.stringify({ name: companyName, domain: domain || null, type: clientType, tier }),
         })
 
         if (!clientRes.ok) {
@@ -176,7 +190,7 @@ export default function Clients() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ name: companyName, tier }),
+          body: JSON.stringify({ name: companyName, domain: domain || null, type: clientType, tier }),
         })
 
         if (!clientRes.ok) {
@@ -260,10 +274,10 @@ export default function Clients() {
                 <thead className="border-b" style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)' }}>
                   <tr>
                     <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Name</th>
+                    <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Type</th>
+                    <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Domain</th>
                     <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Tier</th>
                     <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Products</th>
-                    <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Gatekeeper</th>
-                    <th className="text-left px-6 py-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Created</th>
                     <th className="text-center px-6 py-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Status</th>
                     <th className="text-right px-6 py-4 text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Actions</th>
                   </tr>
@@ -289,6 +303,20 @@ export default function Clients() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
+                        {(() => {
+                          const cfg = typeConfig[client.type] || typeConfig.customer
+                          return (
+                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold border ${cfg.className}`}>
+                              <span className="material-symbols-outlined text-[14px]">{cfg.icon}</span>
+                              {cfg.label}
+                            </span>
+                          )
+                        })()}
+                      </td>
+                      <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                        {client.domain || <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                      </td>
+                      <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded text-xs font-semibold border ${tierColors[client.tier]}`}>
                           {client.tier}
                         </span>
@@ -308,16 +336,6 @@ export default function Clients() {
                         ) : (
                           <span className="text-xs" style={{ color: 'var(--text-muted)' }}>No products</span>
                         )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          client.gatekeeperEnabled ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
-                        }`}>
-                          {client.gatekeeperEnabled ? 'Enabled' : 'Disabled'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        {new Date(client.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <button
@@ -407,6 +425,33 @@ export default function Clients() {
                       required
                     />
                     <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Enter the client company name</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Domain</label>
+                    <input
+                      type="text"
+                      value={domain}
+                      onChange={(e) => setDomain(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary/20" style={{ borderColor: 'var(--border-primary)' }}
+                      placeholder="e.g., acme.com"
+                    />
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Email domain for user matching</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Client Type</label>
+                    <select
+                      value={clientType}
+                      onChange={(e) => setClientType(e.target.value as any)}
+                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary/20" style={{ borderColor: 'var(--border-primary)' }}
+                    >
+                      <option value="customer">Customer</option>
+                      <option value="partner">Partner</option>
+                      <option value="owner">Owner</option>
+                    </select>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Owner = tenant company, Customer = paying client</p>
                   </div>
                   <div>
                     <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Tier</label>

@@ -29,6 +29,8 @@ export const clients = pgTable('clients', {
   id: serial('id').primaryKey(),
   tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
   name: text('name').notNull(),
+  // Email domain for matching users (e.g., 'systech.com', 'acme.com')
+  domain: text('domain'),
   // Client type: owner = tenant's own company, customer = paying client, partner = integration partner
   type: text('type', { enum: ['owner', 'customer', 'partner'] }).default('customer'),
   tier: text('tier', { enum: ['enterprise', 'business', 'starter'] }).default('starter'),

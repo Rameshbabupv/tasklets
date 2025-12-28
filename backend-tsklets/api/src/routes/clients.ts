@@ -11,6 +11,7 @@ export const clientRoutes = Router()
 clientRoutes.use(authenticate)
 
 // List all clients for current tenant (internal only)
+// Returns clients sorted: owner first, then partners, then customers
 clientRoutes.get('/', requireInternal, async (req, res) => {
   try {
     const { tenantId } = req.user!
@@ -33,6 +34,15 @@ clientRoutes.get('/', requireInternal, async (req, res) => {
       products: client.clientProducts?.map((cp: any) => cp.product) || [],
       clientProducts: undefined, // Remove the join table data
     }))
+
+    // Sort: owner first, then partner, then customer
+    const typeOrder: Record<string, number> = { owner: 0, partner: 1, customer: 2 }
+    clientsWithProducts.sort((a: any, b: any) => {
+      const aOrder = typeOrder[a.type] ?? 2
+      const bOrder = typeOrder[b.type] ?? 2
+      if (aOrder !== bOrder) return aOrder - bOrder
+      return a.name.localeCompare(b.name)
+    })
 
     res.json({ clients: clientsWithProducts })
   } catch (error) {
@@ -77,13 +87,15 @@ clientRoutes.get('/:id', async (req, res) => {
 // Create client (internal only)
 clientRoutes.post('/', requireInternal, async (req, res) => {
   try {
-    const { name, tier } = req.body
+    const { name, tier, domain, type } = req.body
     const { tenantId } = req.user!
 
     const [client] = await db.insert(clients).values({
       name,
       tenantId,
       tier,
+      domain: domain || null,
+      type: type || 'customer',
     }).returning()
 
     res.status(201).json({ client })
@@ -97,11 +109,19 @@ clientRoutes.post('/', requireInternal, async (req, res) => {
 clientRoutes.patch('/:id', requireInternal, async (req, res) => {
   try {
     const { id } = req.params
-    const { name, tier, gatekeeperEnabled } = req.body
+    const { name, tier, gatekeeperEnabled, domain, type } = req.body
     const { tenantId } = req.user!
 
+    // Build update object with only provided fields
+    const updateData: any = {}
+    if (name !== undefined) updateData.name = name
+    if (tier !== undefined) updateData.tier = tier
+    if (gatekeeperEnabled !== undefined) updateData.gatekeeperEnabled = gatekeeperEnabled
+    if (domain !== undefined) updateData.domain = domain
+    if (type !== undefined) updateData.type = type
+
     const [client] = await db.update(clients)
-      .set({ name, tier, gatekeeperEnabled })
+      .set(updateData)
       .where(and(
         eq(clients.id, parseInt(id)),
         eq(clients.tenantId, tenantId)
