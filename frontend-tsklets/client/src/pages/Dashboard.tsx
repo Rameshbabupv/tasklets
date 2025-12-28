@@ -9,6 +9,7 @@ import { formatDate } from '@tsklets/utils'
 import StatCard from '../components/StatCard'
 import ModuleCard from '../components/ModuleCard'
 import NewTicketModal from '../components/NewTicketModal'
+import ChangePasswordModal from '../components/ChangePasswordModal'
 import ThemeToggle from '../components/ThemeToggle'
 
 export default function Dashboard() {
@@ -16,7 +17,15 @@ export default function Dashboard() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
   const [showNewTicketModal, setShowNewTicketModal] = useState(false)
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
   const navigate = useNavigate()
+
+  // Check if user needs to change password
+  useEffect(() => {
+    if (user?.requirePasswordChange) {
+      setShowChangePasswordModal(true)
+    }
+  }, [user?.requirePasswordChange])
 
   useEffect(() => {
     fetchTickets()
@@ -317,6 +326,13 @@ export default function Dashboard() {
           )}
         </motion.div>
       </main>
+
+      {/* Change Password Modal (Required) */}
+      <ChangePasswordModal
+        isOpen={showChangePasswordModal}
+        canDismiss={false}
+        onSuccess={() => setShowChangePasswordModal(false)}
+      />
 
       {/* New Ticket Modal */}
       <NewTicketModal isOpen={showNewTicketModal} onClose={() => setShowNewTicketModal(false)} />
