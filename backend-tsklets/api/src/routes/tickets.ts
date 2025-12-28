@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { db } from '../db/index.js'
-import { tickets, attachments, ticketComments, clients } from '../db/schema.js'
+import { tickets, attachments, ticketComments, clients, users } from '../db/schema.js'
 import { eq, and, desc } from 'drizzle-orm'
 import { authenticate, requireInternal } from '../middleware/auth.js'
 import { upload } from '../middleware/upload.js'
@@ -80,30 +80,50 @@ ticketRoutes.get('/', async (req, res) => {
   try {
     const { tenantId, clientId, isInternal, userId, role } = req.user!
 
-    let results
+    let whereClause
 
     if (isInternal) {
       // Internal users see all tickets in their tenant
-      results = await db.select().from(tickets)
-        .where(eq(tickets.tenantId, tenantId))
-        .orderBy(desc(tickets.createdAt))
+      whereClause = eq(tickets.tenantId, tenantId)
     } else if (role === 'company_admin') {
       // Client admin sees all tickets for their client
-      results = await db.select().from(tickets)
-        .where(and(
-          eq(tickets.tenantId, tenantId),
-          eq(tickets.clientId, clientId!)
-        ))
-        .orderBy(desc(tickets.createdAt))
+      whereClause = and(
+        eq(tickets.tenantId, tenantId),
+        eq(tickets.clientId, clientId!)
+      )
     } else {
       // Regular client users only see their own tickets
-      results = await db.select().from(tickets)
-        .where(and(
-          eq(tickets.tenantId, tenantId),
-          eq(tickets.createdBy, userId)
-        ))
-        .orderBy(desc(tickets.createdAt))
+      whereClause = and(
+        eq(tickets.tenantId, tenantId),
+        eq(tickets.createdBy, userId)
+      )
     }
+
+    // Join with users to get creator name
+    const results = await db
+      .select({
+        id: tickets.id,
+        title: tickets.title,
+        description: tickets.description,
+        type: tickets.type,
+        status: tickets.status,
+        clientPriority: tickets.clientPriority,
+        clientSeverity: tickets.clientSeverity,
+        internalPriority: tickets.internalPriority,
+        internalSeverity: tickets.internalSeverity,
+        productId: tickets.productId,
+        createdBy: tickets.createdBy,
+        createdByName: users.name,
+        assignedTo: tickets.assignedTo,
+        tenantId: tickets.tenantId,
+        clientId: tickets.clientId,
+        createdAt: tickets.createdAt,
+        updatedAt: tickets.updatedAt,
+      })
+      .from(tickets)
+      .leftJoin(users, eq(tickets.createdBy, users.id))
+      .where(whereClause)
+      .orderBy(desc(tickets.createdAt))
 
     res.json({ tickets: results })
   } catch (error) {

@@ -57,6 +57,8 @@ export interface Ticket {
   productId?: number
   productName?: string
   userId: number
+  createdBy?: number
+  createdByName?: string  // Name of the user who created the ticket
   assignedTo?: number
   integratorId?: number
   tenantId: number

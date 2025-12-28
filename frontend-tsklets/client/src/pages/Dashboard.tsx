@@ -262,12 +262,14 @@ export default function Dashboard() {
               <table className="w-full hidden md:table">
                 <thead className="bg-slate-100 dark:bg-slate-700">
                   <tr className="text-left text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-200">
-                    <th className="px-6 py-4">ID</th>
-                    <th className="px-6 py-4">Subject</th>
-                    <th className="px-6 py-4">Type</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4">Priority</th>
-                    <th className="px-6 py-4">Date</th>
+                    <th className="px-4 py-4">ID</th>
+                    <th className="px-4 py-4">Subject</th>
+                    <th className="px-4 py-4">Type</th>
+                    <th className="px-4 py-4">Status</th>
+                    <th className="px-4 py-4">Priority</th>
+                    <th className="px-4 py-4">Created By</th>
+                    <th className="px-4 py-4">Created</th>
+                    <th className="px-4 py-4">Updated</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y" style={{ borderColor: 'var(--border-primary)' }}>
@@ -279,8 +281,8 @@ export default function Dashboard() {
                       transition={{ delay: 0.5 + index * 0.05 }}
                       className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/50 dark:hover:from-purple-900/20 dark:hover:to-blue-900/20 transition-colors"
                     >
-                      <td className="px-6 py-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>#{ticket.id}</td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>#{ticket.id}</td>
+                      <td className="px-4 py-4">
                         <button
                           onClick={() => setSelectedTicketId(ticket.id)}
                           className="text-sm font-semibold hover:text-primary transition-colors text-left"
@@ -289,7 +291,7 @@ export default function Dashboard() {
                           {ticket.title}
                         </button>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
                           ticket.type === 'feature_request'
                             ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
@@ -298,14 +300,20 @@ export default function Dashboard() {
                           {ticket.type === 'feature_request' ? '✨ Feature' : '🎫 Support'}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4">
                         <StatusBadge status={ticket.status} />
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-4">
                         <PriorityPill priority={ticket.clientPriority} />
                       </td>
-                      <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      <td className="px-4 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                        {ticket.createdByName || 'Unknown'}
+                      </td>
+                      <td className="px-4 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
                         {formatDate(ticket.createdAt)}
+                      </td>
+                      <td className="px-4 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                        {formatDate(ticket.updatedAt)}
                       </td>
                     </motion.tr>
                   ))}
