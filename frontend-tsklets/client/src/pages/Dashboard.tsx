@@ -69,19 +69,19 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <motion.button
                 onClick={() => setShowNewTicketModal(true)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-purple-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-all shadow-md hover:shadow-lg"
+                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-purple-600 text-white min-h-[44px] min-w-[44px] px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-all shadow-md hover:shadow-lg"
               >
                 <span className="material-symbols-outlined text-lg" aria-hidden="true">add</span>
-                New Ticket
+                <span className="hidden sm:inline">New Ticket</span>
               </motion.button>
               <ThemeToggle />
-              <div className="flex items-center gap-3">
-                <div className="text-right">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="text-right hidden md:block">
                   <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{user?.name}</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{user?.role}</p>
                 </div>
@@ -121,8 +121,8 @@ export default function Dashboard() {
           transition={{ delay: 0.2 }}
           className="mb-8"
         >
-          <h2 className="text-lg font-bold text-slate-900 mb-4">Quick Access</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Quick Access</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <div onClick={() => setShowNewTicketModal(true)} className="cursor-pointer">
               <ModuleCard
                 emoji="🎫"
@@ -161,8 +161,8 @@ export default function Dashboard() {
           transition={{ delay: 0.3 }}
           className="mb-8"
         >
-          <h2 className="text-lg font-bold text-slate-900 mb-4">Ticket Overview</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Ticket Overview</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               icon="confirmation_number"
               emoji="🎫"
@@ -234,48 +234,86 @@ export default function Dashboard() {
               </motion.button>
             </div>
           ) : (
-            <table className="w-full">
-              <thead style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-                <tr className="text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
-                  <th className="px-6 py-4">ID</th>
-                  <th className="px-6 py-4">Subject</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Priority</th>
-                  <th className="px-6 py-4">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y" style={{ borderColor: 'var(--border-primary)' }}>
+            <>
+              {/* Desktop Table View */}
+              <table className="w-full hidden md:table">
+                <thead style={{ backgroundColor: 'var(--bg-tertiary)' }}>
+                  <tr className="text-left text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                    <th className="px-6 py-4">ID</th>
+                    <th className="px-6 py-4">Subject</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4">Priority</th>
+                    <th className="px-6 py-4">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y" style={{ borderColor: 'var(--border-primary)' }}>
+                  {tickets.slice(0, 5).map((ticket, index) => (
+                    <motion.tr
+                      key={ticket.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.5 + index * 0.05 }}
+                      className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/50 dark:hover:from-purple-900/20 dark:hover:to-blue-900/20 transition-colors"
+                    >
+                      <td className="px-6 py-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>#{ticket.id}</td>
+                      <td className="px-6 py-4">
+                        <Link
+                          to={`/tickets/${ticket.id}`}
+                          className="text-sm font-semibold hover:text-primary transition-colors"
+                          style={{ color: 'var(--text-primary)' }}
+                        >
+                          {ticket.title}
+                        </Link>
+                      </td>
+                      <td className="px-6 py-4">
+                        <StatusBadge status={ticket.status} />
+                      </td>
+                      <td className="px-6 py-4">
+                        <PriorityPill priority={ticket.clientPriority} />
+                      </td>
+                      <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                        {formatDate(ticket.createdAt)}
+                      </td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden divide-y" style={{ borderColor: 'var(--border-primary)' }}>
                 {tickets.slice(0, 5).map((ticket, index) => (
-                  <motion.tr
+                  <motion.div
                     key={ticket.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 + index * 0.05 }}
-                    className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/50 transition-colors"
                   >
-                    <td className="px-6 py-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>#{ticket.id}</td>
-                    <td className="px-6 py-4">
-                      <Link
-                        to={`/tickets/${ticket.id}`}
-                        className="text-sm font-semibold hover:text-primary transition-colors"
-                        style={{ color: 'var(--text-primary)' }}
-                      >
-                        {ticket.title}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4">
-                      <StatusBadge status={ticket.status} />
-                    </td>
-                    <td className="px-6 py-4">
-                      <PriorityPill priority={ticket.clientPriority} />
-                    </td>
-                    <td className="px-6 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                      {formatDate(ticket.createdAt)}
-                    </td>
-                  </motion.tr>
+                    <Link
+                      to={`/tickets/${ticket.id}`}
+                      className="block p-4 active:bg-slate-50 dark:active:bg-slate-800 transition-colors min-h-[44px]"
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-sm mb-1 truncate" style={{ color: 'var(--text-primary)' }}>
+                            {ticket.title}
+                          </h3>
+                          <p className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
+                            #{ticket.id}
+                          </p>
+                        </div>
+                        <StatusBadge status={ticket.status} />
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <PriorityPill priority={ticket.clientPriority} />
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                          {formatDate(ticket.createdAt)}
+                        </span>
+                      </div>
+                    </Link>
+                  </motion.div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           )}
         </motion.div>
       </main>
