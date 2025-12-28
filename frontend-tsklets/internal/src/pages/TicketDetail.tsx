@@ -5,21 +5,30 @@ import { useAuthStore } from '../store/auth'
 import ImageModal from '../components/ImageModal'
 
 interface Ticket {
-  id: number
+  id: string
+  issueKey: string
   title: string
   description: string
+  type: string
   status: 'open' | 'in_progress' | 'resolved' | 'closed'
   clientPriority: number
   clientSeverity: number
   internalPriority: number | null
   internalSeverity: number | null
+  clientId: number | null
+  clientName: string | null
+  productCode: string | null
+  productName: string | null
+  creatorName: string | null
+  reporterName: string | null
+  assigneeName: string | null
   tenantName: string
   createdAt: string
 }
 
 interface Attachment {
   id: number
-  ticketId: number
+  ticketId: string
   fileUrl: string
   fileName: string
   fileSize?: number
@@ -221,11 +230,16 @@ export default function TicketDetail() {
         {/* Header */}
         <header className="h-16 px-6 border-b border-slate-200 bg-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/')} className="text-slate-500 hover:text-slate-700">
+            <button onClick={() => navigate('/tickets')} className="text-slate-500 hover:text-slate-700">
               <span className="material-symbols-outlined">arrow_back</span>
             </button>
-            <h2 className="text-lg font-bold text-slate-900">Ticket #{ticket.id}</h2>
-            <span className="text-sm text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{ticket.tenantName}</span>
+            <h2 className="text-lg font-bold text-slate-900">{ticket.issueKey}</h2>
+            {ticket.productName && (
+              <span className="text-sm text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{ticket.productName}</span>
+            )}
+            {ticket.clientName && (
+              <span className="text-sm text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{ticket.clientName}</span>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <button

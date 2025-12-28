@@ -271,6 +271,30 @@ ticketRoutes.get('/:id', async (req, res) => {
       }
     }
 
+    // Get client info
+    let clientInfo = null
+    if (ticket.clientId) {
+      const [c] = await db.select().from(clients).where(eq(clients.id, ticket.clientId)).limit(1)
+      clientInfo = c || null
+    }
+
+    // Get product info
+    let productInfo = null
+    if (ticket.productId) {
+      const [p] = await db.select().from(products).where(eq(products.id, ticket.productId)).limit(1)
+      productInfo = p || null
+    }
+
+    // Get user info (creator, reporter, assignee)
+    const userIds = [ticket.createdBy, ticket.reporterId, ticket.assignedTo].filter(Boolean) as number[]
+    const userInfos: Record<number, { id: number; name: string; email: string }> = {}
+    if (userIds.length > 0) {
+      const usersData = await db.select({ id: users.id, name: users.name, email: users.email })
+        .from(users)
+        .where(or(...userIds.map(uid => eq(users.id, uid))))
+      usersData.forEach(u => { userInfos[u.id] = u })
+    }
+
     // Get attachments
     const ticketAttachments = await db.select().from(attachments)
       .where(eq(attachments.ticketId, ticket.id))
@@ -355,8 +379,26 @@ ticketRoutes.get('/:id', async (req, res) => {
       })),
     ]
 
+    // Enrich ticket with related info
+    const enrichedTicket = {
+      ...ticket,
+      // Client info
+      clientName: clientInfo?.name || null,
+      clientType: clientInfo?.type || null,
+      // Product info
+      productCode: productInfo?.code || null,
+      productName: productInfo?.name || null,
+      // User info
+      creatorName: ticket.createdBy ? userInfos[ticket.createdBy]?.name || null : null,
+      creatorEmail: ticket.createdBy ? userInfos[ticket.createdBy]?.email || null : null,
+      reporterName: ticket.reporterId ? userInfos[ticket.reporterId]?.name || null : null,
+      reporterEmail: ticket.reporterId ? userInfos[ticket.reporterId]?.email || null : null,
+      assigneeName: ticket.assignedTo ? userInfos[ticket.assignedTo]?.name || null : null,
+      assigneeEmail: ticket.assignedTo ? userInfos[ticket.assignedTo]?.email || null : null,
+    }
+
     res.json({
-      ticket,
+      ticket: enrichedTicket,
       attachments: ticketAttachments,
       comments,
       parent,
