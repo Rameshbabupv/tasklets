@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "testing-guide.md",
+                "file": "beads-hierarchy.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "testing-guide"
+              "title": "beads-hierarchy"
             }
           }
         ]
@@ -185,14 +185,18 @@
   },
   "active": "aeac82d127629f4d",
   "lastOpenFiles": [
+    "beads-hierarchy-v2.md",
+    "beads-hierarchy.md",
+    "beads-hierarchy.md.tmp.67838.1766857765269",
+    "api.md",
     "spark-feature.md",
     "quick-start.md",
     "product.md",
+    "testing-guide.md",
     "local-build-testing.md",
     "design-prompt.md",
     "deployment.md",
     "deploy.md",
-    "architecture.md",
-    "api.md"
+    "architecture.md"
   ]
 }

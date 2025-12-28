@@ -48,14 +48,14 @@ export default function CreateForm({ type }: CreateFormProps) {
       // Add type-specific fields
       if (type === 'requirement') {
         endpoint = '/api/requirements'
-        body.productId = 1 // TODO: Get from context or user selection
+        body.productId = 14 // Tasklets product ID
         body.originalDraft = formData.description
       } else if (type === 'idea') {
         endpoint = '/api/ideas'
         body.visibility = 'private'
       } else if (type === 'epic') {
         endpoint = '/api/epics'
-        body.productId = 1 // TODO: Get from context
+        body.productId = 14 // Tasklets product ID
       } else if (type === 'feature') {
         endpoint = '/api/features'
         body.epicId = 1 // TODO: Get from context or user selection
@@ -70,7 +70,7 @@ export default function CreateForm({ type }: CreateFormProps) {
       } else if (type === 'ticket') {
         endpoint = '/api/tickets'
         body.clientId = 1 // TODO: Get from context
-        body.productId = 1
+        body.productId = 14 // Tasklets product ID
       }
 
       // Add optional fields for detailed mode
