@@ -4,6 +4,7 @@ import { useAuthStore } from './store/auth'
 import { useTheme } from './hooks/useTheme'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
+import MyTickets from './pages/MyTickets'
 import NewTicket from './pages/NewTicket'
 import TicketDetail from './pages/TicketDetail'
 import DevUserSwitcher from './components/DevUserSwitcher'
@@ -31,6 +32,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tickets"
+          element={
+            <ProtectedRoute>
+              <MyTickets />
             </ProtectedRoute>
           }
         />
