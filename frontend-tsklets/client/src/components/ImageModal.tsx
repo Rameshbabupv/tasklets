@@ -4,10 +4,12 @@ interface ImageModalProps {
   imageUrl: string
   fileName: string
   fileSize?: number
+  fileType?: string
   onClose: () => void
 }
 
-export default function ImageModal({ imageUrl, fileName, fileSize, onClose }: ImageModalProps) {
+export default function ImageModal({ imageUrl, fileName, fileSize, fileType, onClose }: ImageModalProps) {
+  const isVideo = fileType?.startsWith('video/')
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -45,16 +47,27 @@ export default function ImageModal({ imageUrl, fileName, fileSize, onClose }: Im
           <span className="material-symbols-outlined text-[32px]">close</span>
         </button>
 
-        {/* Image */}
+        {/* Media */}
         <div
           className="flex items-center justify-center"
           onClick={(e) => e.stopPropagation()}
         >
-          <img
-            src={imageUrl}
-            alt={fileName}
-            className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
-          />
+          {isVideo ? (
+            <video
+              src={imageUrl}
+              controls
+              autoPlay
+              className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+            >
+              Your browser does not support video playback.
+            </video>
+          ) : (
+            <img
+              src={imageUrl}
+              alt={fileName}
+              className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+            />
+          )}
         </div>
 
         {/* File info */}

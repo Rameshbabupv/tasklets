@@ -18,7 +18,7 @@ export default function NewTicket() {
   const [loadingProducts, setLoadingProducts] = useState(true)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [previewUrls, setPreviewUrls] = useState<string[]>([])
-  const [modalImage, setModalImage] = useState<{ url: string; name: string; size: number } | null>(null)
+  const [modalImage, setModalImage] = useState<{ url: string; name: string; size: number; type: string } | null>(null)
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -89,14 +89,17 @@ export default function NewTicket() {
     const files = Array.from(e.target.files || [])
     const validFiles = files.filter((file) => {
       // Validate file type
-      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml']
+      const validTypes = [
+        'image/jpeg', 'image/png', 'image/gif', 'image/svg+xml',
+        'video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo'
+      ]
       if (!validTypes.includes(file.type)) {
-        alert(`${file.name}: Invalid file type. Only JPG, PNG, GIF, and SVG are allowed.`)
+        alert(`${file.name}: Invalid file type. Only images (JPG, PNG, GIF, SVG) and videos (MP4, MOV, WEBM, AVI) are allowed.`)
         return false
       }
-      // Validate file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
-        alert(`${file.name}: File too large. Maximum size is 5MB.`)
+      // Validate file size (10MB max)
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`${file.name}: File too large. Maximum size is 10MB.`)
         return false
       }
       return true
@@ -355,7 +358,7 @@ export default function NewTicket() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/gif,image/svg+xml"
+              accept="image/jpeg,image/png,image/gif,image/svg+xml,video/mp4,video/quicktime,video/webm,video/x-msvideo"
               multiple
               onChange={handleFileSelect}
               className="hidden"
@@ -371,29 +374,47 @@ export default function NewTicket() {
             >
               <span className="material-symbols-outlined text-4xl mb-2" style={{ color: 'var(--text-muted)' }}>cloud_upload</span>
               <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Click to upload</p>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>SVG, PNG, JPG or GIF (max. 5 files, 5MB each)</p>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Images (JPG, PNG, GIF, SVG) or Videos (MP4, MOV, WEBM, AVI) • Max 5 files, 10MB each</p>
             </div>
 
             {/* Selected Files - Thumbnail Grid */}
             {selectedFiles.length > 0 && (
               <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {selectedFiles.map((file, index) => (
-                  <div key={index} className="relative group">
-                    {/* Thumbnail */}
-                    <div
-                      onClick={() => setModalImage({ url: previewUrls[index], name: file.name, size: file.size })}
-                      className="aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-colors"
-                      style={{
-                        backgroundColor: 'var(--bg-tertiary)',
-                        borderColor: 'var(--border-primary)',
-                      }}
-                    >
-                      <img
-                        src={previewUrls[index]}
-                        alt={file.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+                {selectedFiles.map((file, index) => {
+                  const isVideo = file.type.startsWith('video/')
+                  return (
+                    <div key={index} className="relative group">
+                      {/* Thumbnail */}
+                      <div
+                        onClick={() => setModalImage({ url: previewUrls[index], name: file.name, size: file.size, type: file.type })}
+                        className="aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-colors relative"
+                        style={{
+                          backgroundColor: 'var(--bg-tertiary)',
+                          borderColor: 'var(--border-primary)',
+                        }}
+                      >
+                        {isVideo ? (
+                          <>
+                            <video
+                              src={previewUrls[index]}
+                              className="w-full h-full object-cover"
+                              muted
+                            />
+                            {/* Play icon overlay */}
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                              <span className="material-symbols-outlined text-5xl text-white opacity-90">
+                                play_circle
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <img
+                            src={previewUrls[index]}
+                            alt={file.name}
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                      </div>
 
                     {/* Remove button */}
                     <button
@@ -404,15 +425,19 @@ export default function NewTicket() {
                       <span className="material-symbols-outlined text-[16px]">close</span>
                     </button>
 
-                    {/* File info */}
-                    <div className="mt-1">
-                      <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }} title={file.name}>
-                        {file.name}
-                      </p>
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{formatFileSize(file.size)}</p>
+                      {/* File info */}
+                      <div className="mt-1">
+                        <p className="text-xs truncate" style={{ color: 'var(--text-secondary)' }} title={file.name}>
+                          {file.name}
+                        </p>
+                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                          {isVideo && <span className="mr-1">🎥</span>}
+                          {formatFileSize(file.size)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
@@ -434,12 +459,13 @@ export default function NewTicket() {
         </form>
       </main>
 
-      {/* Image Modal */}
+      {/* Media Modal */}
       {modalImage && (
         <ImageModal
           imageUrl={modalImage.url}
           fileName={modalImage.name}
           fileSize={modalImage.size}
+          fileType={modalImage.type}
           onClose={() => setModalImage(null)}
         />
       )}
