@@ -123,6 +123,7 @@ export const tickets = pgTable('tickets', {
   assignedTo: integer('assigned_to').references(() => users.id), // Internal assignee
   integratorId: integer('integrator_id').references(() => users.id),
   sourceIdeaId: integer('source_idea_id'), // Will reference ideas.id
+  largeFileLink: text('large_file_link'), // Dropbox/OneDrive/Google Drive link for large files
   metadata: jsonb('metadata'), // Dynamic fields: { customField1, customField2, ... }
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),

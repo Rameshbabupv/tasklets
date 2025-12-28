@@ -49,7 +49,7 @@ ticketRoutes.get('/all', requireInternal, async (req, res) => {
 // Create ticket
 ticketRoutes.post('/', async (req, res) => {
   try {
-    const { title, description, productId, clientPriority, clientSeverity } = req.body
+    const { title, description, productId, clientPriority, clientSeverity, largeFileLink } = req.body
     const { userId, tenantId, clientId } = req.user!
 
     const [ticket] = await db.insert(tickets).values({
@@ -58,6 +58,7 @@ ticketRoutes.post('/', async (req, res) => {
       productId,
       clientPriority,
       clientSeverity,
+      largeFileLink: largeFileLink || null,
       userId,
       tenantId,
       clientId, // Will be null for internal users

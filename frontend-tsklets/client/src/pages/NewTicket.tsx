@@ -25,6 +25,7 @@ export default function NewTicket() {
     productId: 0,
     clientPriority: 3,
     clientSeverity: 3,
+    largeFileLink: '',
   })
 
   useEffect(() => {
@@ -440,6 +441,28 @@ export default function NewTicket() {
                 })}
               </div>
             )}
+          </div>
+
+          {/* Large File Link */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+              Large File Link (Optional)
+            </label>
+            <input
+              type="url"
+              value={form.largeFileLink}
+              onChange={(e) => setForm({ ...form, largeFileLink: e.target.value })}
+              placeholder="Dropbox, OneDrive, or Google Drive link for large files..."
+              className="input-field py-3 text-sm"
+              style={{
+                color: 'var(--text-primary)',
+                backgroundColor: 'var(--bg-card)',
+                borderColor: 'var(--border-primary)',
+              }}
+            />
+            <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+              💡 For files larger than 10MB, please upload to cloud storage and share the link here
+            </p>
           </div>
 
           {/* Actions */}
