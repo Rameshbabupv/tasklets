@@ -65,6 +65,7 @@ export default function NewTicket() {
   const [form, setForm] = useState({
     title: '',
     description: '',
+    type: 'support' as 'support' | 'feature_request',
     productId: 0,
     clientPriority: 3,
     clientSeverity: 3,
@@ -298,6 +299,29 @@ export default function NewTicket() {
           className="rounded-xl border shadow-card p-6"
           style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}
         >
+          {/* Type Selection */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Type *</label>
+            <select
+              value={form.type}
+              onChange={(e) => setForm({ ...form, type: e.target.value as 'support' | 'feature_request' })}
+              className="input-field py-3 text-sm"
+              style={{
+                color: 'var(--text-primary)',
+                backgroundColor: 'var(--bg-card)',
+                borderColor: 'var(--border-primary)',
+              }}
+            >
+              <option value="support">Support Request - Bug or Issue</option>
+              <option value="feature_request">Feature Request - New Feature or Enhancement</option>
+            </select>
+            {form.type === 'feature_request' && (
+              <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                💡 Feature requests will be reviewed by our team for feasibility and pricing
+              </p>
+            )}
+          </div>
+
           {/* Subject */}
           <div className="mb-6">
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>Subject</label>
@@ -305,7 +329,7 @@ export default function NewTicket() {
               type="text"
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="Briefly summarize the issue (e.g. Login page timeout)"
+              placeholder={form.type === 'feature_request' ? 'Describe the feature or enhancement' : 'Briefly summarize the issue (e.g. Login page timeout)'}
               required
               className="input-field py-3 text-sm"
               style={{
