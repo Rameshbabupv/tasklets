@@ -444,14 +444,14 @@ ticketRoutes.patch('/:id', async (req, res) => {
     }
 
     // Build update data
-    const updateData: any = { updatedAt: new Date().toISOString() }
+    const updateData: any = { updatedAt: new Date() }
 
     // Status changes
     if (status) {
       updateData.status = status
       // If closing, set closedAt
       if (['resolved', 'closed', 'cancelled'].includes(status) && !ticket.closedAt) {
-        updateData.closedAt = new Date().toISOString()
+        updateData.closedAt = new Date()
       }
     }
 
