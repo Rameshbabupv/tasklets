@@ -217,16 +217,25 @@ authRoutes.post('/change-password', async (req, res) => {
 
     // Hash and update new password
     const passwordHash = await bcrypt.hash(newPassword, 10)
-    await db.update(users)
+    console.log('Updating password for user:', payload.userId)
+
+    const updateResult = await db.update(users)
       .set({
         passwordHash,
         requirePasswordChange: false, // Clear the flag
       })
       .where(eq(users.id, payload.userId))
+      .returning()
+
+    console.log('Password update result:', updateResult)
 
     res.json({
       success: true,
       message: 'Password changed successfully',
+      user: updateResult[0] ? {
+        id: updateResult[0].id,
+        requirePasswordChange: updateResult[0].requirePasswordChange
+      } : null,
     })
   } catch (error) {
     console.error('Change password error:', error)

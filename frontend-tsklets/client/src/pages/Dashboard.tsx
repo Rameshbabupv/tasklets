@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Toaster } from 'sonner'
@@ -18,11 +18,13 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [showNewTicketModal, setShowNewTicketModal] = useState(false)
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
+  const passwordCheckDone = useRef(false)
   const navigate = useNavigate()
 
-  // Check if user needs to change password
+  // Check if user needs to change password - only on initial mount
   useEffect(() => {
-    if (user?.requirePasswordChange) {
+    if (!passwordCheckDone.current && user?.requirePasswordChange) {
+      passwordCheckDone.current = true
       setShowChangePasswordModal(true)
     }
   }, [user?.requirePasswordChange])

@@ -27,7 +27,9 @@ export interface User {
   tenantId: number
   clientId: number | null  // null = internal user
   isInternal: boolean      // Convenience: clientId === null
+  requirePasswordChange?: boolean  // Force password change on first login
   createdAt?: string
+  tenant?: Tenant
 }
 
 export type UserRole =

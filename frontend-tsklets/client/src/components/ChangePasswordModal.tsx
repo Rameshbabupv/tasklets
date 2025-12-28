@@ -80,6 +80,7 @@ export default function ChangePasswordModal({ isOpen, canDismiss = false, onSucc
       })
 
       const data = await res.json()
+      console.log('Change password response:', data)
 
       if (!res.ok) {
         throw new Error(data.error || 'Failed to change password')
@@ -87,7 +88,9 @@ export default function ChangePasswordModal({ isOpen, canDismiss = false, onSucc
 
       // Update user state to clear requirePasswordChange flag
       if (user) {
-        setUser({ ...user, requirePasswordChange: false })
+        const updatedUser = { ...user, requirePasswordChange: false }
+        console.log('Updating user state:', updatedUser)
+        setUser(updatedUser)
       }
 
       // Clear form

@@ -2,7 +2,7 @@ import { db } from './index.js'
 import { tenants, clients, users, products, clientProducts, userProducts, epics, features, devTasks, taskAssignments } from './schema.js'
 import bcrypt from 'bcryptjs'
 
-const PASSWORD = 'systech@123'
+const PASSWORD = 'Systech@123'
 
 async function seed() {
   console.log('Seeding database...')
@@ -371,7 +371,7 @@ async function seed() {
   // === SUMMARY ===
 
   console.log('\n✅ Seed complete!')
-  console.log('\n📋 All users password: systech@123')
+  console.log('\n📋 All users password: Systech@123')
   console.log('\n┌─────────────────────────────────────────────────────────┐')
   console.log('│ TENANT: SysTech (Owner)                                 │')
   console.log('├─────────────────────────────────────────────────────────┤')

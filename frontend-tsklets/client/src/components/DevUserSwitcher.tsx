@@ -11,15 +11,15 @@ interface DevUser {
 
 const DEV_USERS: DevUser[] = [
   // Acme Corp Users
-  { email: 'john@acme.com', name: 'John', role: 'user', tenant: 'Acme Corp', password: 'systech@123' },
-  { email: 'jane@acme.com', name: 'Jane', role: 'user', tenant: 'Acme Corp', password: 'systech@123' },
-  { email: 'kumar@acme.com', name: 'Kumar', role: 'user', tenant: 'Acme Corp', password: 'systech@123' },
-  { email: 'latha@acme.com', name: 'Latha', role: 'company_admin', tenant: 'Acme Corp', password: 'systech@123' },
-  { email: 'deepa@acme.com', name: 'Deepa', role: 'company_admin', tenant: 'Acme Corp', password: 'systech@123' },
+  { email: 'john@acme.com', name: 'John', role: 'user', tenant: 'Acme Corp', password: 'Systech@123' },
+  { email: 'jane@acme.com', name: 'Jane', role: 'user', tenant: 'Acme Corp', password: 'Systech@123' },
+  { email: 'kumar@acme.com', name: 'Kumar', role: 'user', tenant: 'Acme Corp', password: 'Systech@123' },
+  { email: 'latha@acme.com', name: 'Latha', role: 'company_admin', tenant: 'Acme Corp', password: 'Systech@123' },
+  { email: 'deepa@acme.com', name: 'Deepa', role: 'company_admin', tenant: 'Acme Corp', password: 'Systech@123' },
   // TechCorp Users
-  { email: 'alex@techcorp.com', name: 'Alex', role: 'user', tenant: 'TechCorp', password: 'systech@123' },
-  { email: 'sara@techcorp.com', name: 'Sara', role: 'user', tenant: 'TechCorp', password: 'systech@123' },
-  { email: 'mike@techcorp.com', name: 'Mike', role: 'company_admin', tenant: 'TechCorp', password: 'systech@123' },
+  { email: 'alex@techcorp.com', name: 'Alex', role: 'user', tenant: 'TechCorp', password: 'Systech@123' },
+  { email: 'sara@techcorp.com', name: 'Sara', role: 'user', tenant: 'TechCorp', password: 'Systech@123' },
+  { email: 'mike@techcorp.com', name: 'Mike', role: 'company_admin', tenant: 'TechCorp', password: 'Systech@123' },
 ]
 
 export default function DevUserSwitcher() {
@@ -156,7 +156,7 @@ export default function DevUserSwitcher() {
           </div>
 
           <div className="p-2 border-t border-slate-200 bg-slate-50 text-xs text-slate-500 text-center">
-            All passwords: <code className="bg-slate-200 px-1 rounded">systech@123</code>
+            All passwords: <code className="bg-slate-200 px-1 rounded">Systech@123</code>
           </div>
         </div>
       )}
