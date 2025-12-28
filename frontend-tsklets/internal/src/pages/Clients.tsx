@@ -525,7 +525,8 @@ export default function Clients() {
           onClose={() => setShowUserModal(false)}
           client={userModalClient}
           token={token!}
-          showResetPassword={false}
+          showResetPassword={true}
+          isInternal={true}
           maxProducts={2}
         />
       )}

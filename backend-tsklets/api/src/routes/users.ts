@@ -198,6 +198,44 @@ userRoutes.patch('/:id/toggle', requireInternal, async (req, res) => {
   }
 })
 
+// Reset user password (internal only)
+userRoutes.patch('/:id/reset-password-internal', requireInternal, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { tenantId } = req.user!
+    const userId = parseInt(id)
+
+    // Verify user belongs to tenant
+    const [targetUser] = await db.select().from(users)
+      .where(and(
+        eq(users.id, userId),
+        eq(users.tenantId, tenantId)
+      ))
+      .limit(1)
+
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    const passwordHash = await bcrypt.hash(STANDARD_PASSWORD, 10)
+
+    await db.update(users)
+      .set({
+        passwordHash,
+        requirePasswordChange: true,
+      })
+      .where(eq(users.id, userId))
+
+    res.json({
+      success: true,
+      message: `Password reset to ${STANDARD_PASSWORD}. User will be required to change password on next login.`,
+    })
+  } catch (error) {
+    console.error('Reset password error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 // Get user's assigned products
 userRoutes.get('/:id/products', async (req, res) => {
   try {

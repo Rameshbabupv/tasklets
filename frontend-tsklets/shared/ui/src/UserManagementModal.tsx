@@ -30,6 +30,7 @@ interface UserManagementModalProps {
   showResetPassword?: boolean
   maxProducts?: number
   onUserChange?: () => void
+  isInternal?: boolean // Use internal API endpoints
 }
 
 export function UserManagementModal({
@@ -40,6 +41,7 @@ export function UserManagementModal({
   showResetPassword = false,
   maxProducts = 2,
   onUserChange,
+  isInternal = false,
 }: UserManagementModalProps) {
   const [users, setUsers] = useState<User[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -215,7 +217,11 @@ export function UserManagementModal({
     }
 
     try {
-      const res = await fetch(`/api/users/${user.id}/reset-password`, {
+      const endpoint = isInternal
+        ? `/api/users/${user.id}/reset-password-internal`
+        : `/api/users/${user.id}/reset-password`
+
+      const res = await fetch(endpoint, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       })
