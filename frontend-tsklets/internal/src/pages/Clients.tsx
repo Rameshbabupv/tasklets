@@ -378,7 +378,7 @@ export default function Clients() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: 'var(--bg-card)' }}>
+          <div className="rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto" style={{ backgroundColor: 'var(--bg-card)' }}>
             <div className="p-6 border-b" style={{ borderColor: 'var(--border-primary)' }}>
               <h3 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
                 {editingClient ? 'Edit Client' : 'Add New Client'}
@@ -397,81 +397,81 @@ export default function Clients() {
                 </div>
               )}
 
-              {/* Company Info */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
-                  <span className="material-symbols-outlined text-[18px]">business</span>
-                  Company Information
-                </h4>
+              {/* Two-panel layout: Company Info + Products */}
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                {/* Left Panel: Company Info (3 cols) */}
+                <div className="lg:col-span-3 space-y-4">
+                  <h4 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+                    <span className="material-symbols-outlined text-[18px]">business</span>
+                    Company Information
+                  </h4>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={`block text-sm font-medium mb-1 ${companyName ? 'text-green-600' : 'text-red-500'}`}>
-                      Company Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary/20" style={{ borderColor: 'var(--border-primary)' }}
-                      required
-                    />
-                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Enter the client company name</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${companyName ? 'text-green-600' : 'text-red-500'}`}>
+                        Company Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary/20" style={{ borderColor: 'var(--border-primary)' }}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Domain</label>
+                      <input
+                        type="text"
+                        value={domain}
+                        onChange={(e) => setDomain(e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary/20" style={{ borderColor: 'var(--border-primary)' }}
+                        placeholder="e.g., acme.com"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Domain</label>
-                    <input
-                      type="text"
-                      value={domain}
-                      onChange={(e) => setDomain(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary/20" style={{ borderColor: 'var(--border-primary)' }}
-                      placeholder="e.g., acme.com"
-                    />
-                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Email domain for user matching</p>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Client Type</label>
+                      <select
+                        value={clientType}
+                        onChange={(e) => setClientType(e.target.value as any)}
+                        className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary/20" style={{ borderColor: 'var(--border-primary)' }}
+                      >
+                        <option value="customer">Customer</option>
+                        <option value="partner">Partner</option>
+                        <option value="owner">Owner</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Tier</label>
+                      <select
+                        value={tier}
+                        onChange={(e) => setTier(e.target.value as any)}
+                        className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary/20" style={{ borderColor: 'var(--border-primary)' }}
+                      >
+                        <option value="starter">Starter</option>
+                        <option value="business">Business</option>
+                        <option value="enterprise">Enterprise</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Client Type</label>
-                    <select
-                      value={clientType}
-                      onChange={(e) => setClientType(e.target.value as any)}
-                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary/20" style={{ borderColor: 'var(--border-primary)' }}
-                    >
-                      <option value="customer">Customer</option>
-                      <option value="partner">Partner</option>
-                      <option value="owner">Owner</option>
-                    </select>
-                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Owner = tenant company, Customer = paying client</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>Tier</label>
-                    <select
-                      value={tier}
-                      onChange={(e) => setTier(e.target.value as any)}
-                      className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-primary/20" style={{ borderColor: 'var(--border-primary)' }}
-                    >
-                      <option value="starter">Starter</option>
-                      <option value="business">Business</option>
-                      <option value="enterprise">Enterprise</option>
-                    </select>
-                  </div>
+                {/* Right Panel: Products (2 cols) */}
+                <div className="lg:col-span-2">
+                  <h4 className="text-sm font-semibold flex items-center gap-2 mb-4" style={{ color: 'var(--text-secondary)' }}>
+                    <span className="material-symbols-outlined text-[18px]">inventory_2</span>
+                    Products
+                  </h4>
+                  <ProductSelector
+                    products={products}
+                    selectedIds={selectedProducts}
+                    onChange={setSelectedProducts}
+                    placeholder="Select products..."
+                  />
                 </div>
-              </div>
-
-              {/* Products */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
-                  <span className="material-symbols-outlined text-[18px]">inventory_2</span>
-                  Products
-                </h4>
-                <ProductSelector
-                  products={products}
-                  selectedIds={selectedProducts}
-                  onChange={setSelectedProducts}
-                  placeholder="Select products for this client..."
-                />
               </div>
 
               {/* Admin User - only for new clients */}
