@@ -10,8 +10,8 @@
   "scripts": {
     "dev": "concurrently -n API,CLIENT,INTERNAL -c blue,green,magenta \"npm run dev:api\" \"npm run dev:client\" \"npm run dev:internal\"",
     "dev:api": "cd backend-tsklets/api && npx tsx watch src/index.ts",
-    "dev:client": "cd frontend-tsklets/client && npx vite --port 4010",
-    "dev:internal": "cd frontend-tsklets/internal && npx vite --port 4020",
+    "dev:client": "cd frontend-tsklets/client && npx vite --port 4010 --host",
+    "dev:internal": "cd frontend-tsklets/internal && npx vite --port 4020 --host",
     "build": "npm run build --workspaces --if-present",
     "start": "concurrently -n API,CLIENT,INTERNAL -c blue,green,magenta \"npm run start:api\" \"npm run start:client\" \"npm run start:internal\"",
     "start:api": "cd backend-tsklets/api && npm start",
