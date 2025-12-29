@@ -6,6 +6,7 @@ export { StatusBadge } from './StatusBadge'
 export { PriorityPill } from './PriorityPill'
 export { Avatar } from './Avatar'
 export { UserManagementModal } from './UserManagementModal'
+export { ProductSelector } from './ProductSelector'
 
 // Design tokens (from Stitch mockups)
 export const tokens = {

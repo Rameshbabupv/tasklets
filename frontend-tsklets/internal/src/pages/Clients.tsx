@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import Sidebar from '../components/Sidebar'
 import { useAuthStore } from '../store/auth'
-import { UserManagementModal } from '@tsklets/ui'
+import { UserManagementModal, ProductSelector } from '@tsklets/ui'
 
 interface Client {
   id: number
@@ -95,14 +95,6 @@ export default function Clients() {
     } catch (err) {
       console.error('Failed to fetch client products', err)
     }
-  }
-
-  const toggleProduct = (productId: number) => {
-    setSelectedProducts(prev =>
-      prev.includes(productId)
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    )
   }
 
   const resetForm = () => {
@@ -474,26 +466,12 @@ export default function Clients() {
                   <span className="material-symbols-outlined text-[18px]">inventory_2</span>
                   Products
                 </h4>
-                <div className="flex flex-wrap gap-2">
-                  {products.map((product) => (
-                    <button
-                      key={product.id}
-                      type="button"
-                      onClick={() => toggleProduct(product.id)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                        selectedProducts.includes(product.id)
-                          ? 'bg-primary text-white border-primary'
-                          : 'hover:border-slate-300'
-                      }`}
-                      style={!selectedProducts.includes(product.id) ? { backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', borderColor: 'var(--border-primary)' } : undefined}
-                    >
-                      {product.name}
-                    </button>
-                  ))}
-                </div>
-                {products.length === 0 && (
-                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>No products available</p>
-                )}
+                <ProductSelector
+                  products={products}
+                  selectedIds={selectedProducts}
+                  onChange={setSelectedProducts}
+                  placeholder="Select products for this client..."
+                />
               </div>
 
               {/* Admin User - only for new clients */}

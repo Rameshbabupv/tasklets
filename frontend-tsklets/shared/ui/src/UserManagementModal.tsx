@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { ProductSelector } from './ProductSelector'
 
 interface User {
   id: number
@@ -236,18 +237,6 @@ export function UserManagementModal({
     }
   }
 
-  const handleProductToggle = (productId: number) => {
-    if (selectedProducts.includes(productId)) {
-      setSelectedProducts(selectedProducts.filter(id => id !== productId))
-    } else {
-      if (selectedProducts.length < maxProducts) {
-        setSelectedProducts([...selectedProducts, productId])
-      } else {
-        alert(`Maximum ${maxProducts} products can be assigned`)
-      }
-    }
-  }
-
   const filteredUsers = users.filter(u =>
     u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -346,39 +335,14 @@ export function UserManagementModal({
 
               {/* Product Assignment */}
               {products.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-                    Assigned Products {maxProducts > 0 && `(max ${maxProducts})`}
-                  </label>
-                  <div
-                    className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3"
-                    style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}
-                  >
-                    {products.map((product) => (
-                      <label
-                        key={product.id}
-                        className="flex items-start gap-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 p-2 rounded"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedProducts.includes(product.id)}
-                          onChange={() => handleProductToggle(product.id)}
-                          className="mt-0.5 rounded border-slate-300 text-primary focus:ring-primary"
-                        />
-                        <div className="flex-1">
-                          <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                            {product.name}
-                          </div>
-                          {product.description && (
-                            <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                              {product.description}
-                            </div>
-                          )}
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                <ProductSelector
+                  products={products}
+                  selectedIds={selectedProducts}
+                  onChange={setSelectedProducts}
+                  maxProducts={maxProducts}
+                  label="Assigned Products"
+                  placeholder="Select products to assign..."
+                />
               )}
 
               <div className="flex items-center gap-3">
