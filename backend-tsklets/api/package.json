@@ -9,7 +9,8 @@
     "db:push": "drizzle-kit push:pg",
     "db:generate": "drizzle-kit generate:pg",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx src/db/seed.ts"
+    "db:seed": "tsx src/db/seeds/index.ts essentials",
+    "db:seed:demo": "tsx src/db/seeds/index.ts demo"
   },
   "dependencies": {
     "@libsql/client": "^0.4.3",

@@ -1,0 +1,56 @@
+/**
+ * Seed: Lookups (Products)
+ * Run: npm run db:seed
+ *
+ * This seeds essential lookup data required for the system to function.
+ */
+
+import { db } from '../index.js'
+import { products, productSequences } from '../schema.js'
+
+export const productsData = [
+  { id: 1, code: 'CRML', name: 'CRM (legacy)', description: 'Customer Relationship Management - Marketing, lead generation, deal conversion' },
+  { id: 2, code: 'SDMSL', name: 'SDMS (legacy)', description: 'Supply & Distribution Management - Multi-location distributors' },
+  { id: 3, code: 'MMSL', name: 'MMS (legacy)', description: 'Manufacturing Management System - Discrete manufacturing' },
+  { id: 4, code: 'HRML', name: 'HRM (legacy)', description: 'Human Resource Management - Recruitment to retirement' },
+  { id: 5, code: 'FINL', name: 'Finance (legacy)', description: 'Financial Management - Standalone and integrated finance module' },
+  { id: 6, code: 'CRMS', name: 'CRM Sales', description: 'Customer Relationship Management v2 - Pre-sale customer engagement' },
+  { id: 7, code: 'CRMSV', name: 'CRM Service', description: 'Customer Relationship Management v2 - Post-sale customer support' },
+  { id: 8, code: 'SDMS', name: 'SDMS v2', description: 'Supply & Distribution Management System v2' },
+  { id: 9, code: 'MMS', name: 'MMS v2', description: 'Manufacturing Management System v2' },
+  { id: 10, code: 'TMS', name: 'TMS', description: 'Textile Management System - spinning, processing, weaving, knitting, apparel' },
+  { id: 11, code: 'HRM', name: 'HRM v2', description: 'Human Resource Management v2' },
+  { id: 12, code: 'FIN', name: 'Finance v2', description: 'Financial Management v2' },
+  { id: 13, code: 'EXIM', name: 'EXIM', description: 'Export & Import Management' },
+  { id: 14, code: 'TSKLTS', name: 'Tasklets', description: 'Unified platform for client issues, internal requests, and development progress' },
+]
+
+export async function seedLookups(tenantId: number) {
+  console.log('Seeding products...')
+
+  for (const product of productsData) {
+    await db.insert(products).values({
+      id: product.id,
+      tenantId,
+      code: product.code,
+      name: product.name,
+      description: product.description,
+    }).onConflictDoNothing()
+  }
+
+  // Initialize product sequences
+  console.log('Initializing product sequences...')
+  const types = ['S', 'B', 'T', 'F', 'R', 'E', 'SP', 'N'] // support, bug, task, feature, feature_request, epic, spike, note
+
+  for (const product of productsData) {
+    for (const type of types) {
+      await db.insert(productSequences).values({
+        productId: product.id,
+        type,
+        lastNumber: 0,
+      }).onConflictDoNothing()
+    }
+  }
+
+  console.log(`Seeded ${productsData.length} products`)
+}
