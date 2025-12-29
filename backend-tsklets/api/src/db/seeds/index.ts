@@ -51,15 +51,17 @@ export async function seedDemo() {
 
   console.log('\n=== Demo Seed Complete ===\n')
   console.log('Demo Users:')
+  console.log('  All users password: Systech@123')
+  console.log('')
   console.log('  Internal Portal (systech.com):')
-  console.log('    - ramesh@systech.com (admin) - password: systech@123')
-  console.log('    - mohan@systech.com (support) - password: systech@123')
-  console.log('    - sakthi@systech.com (integrator) - password: systech@123')
-  console.log('    - jai@systech.com (developer) - password: systech@123')
-  console.log('    - priya@systech.com (developer) - password: systech@123')
+  console.log('    - ramesh@systech.com (admin)')
+  console.log('    - mohan@systech.com (support)')
+  console.log('    - sakthi@systech.com (integrator)')
+  console.log('    - jai@systech.com (developer)')
+  console.log('    - priya@systech.com (developer)')
   console.log('')
   console.log('  Client Portal (acme.com, techcorp.com):')
-  console.log('    - Default password: Systech@123')
+  console.log('    - See demo/02-users.ts for full list')
   console.log('')
 }
 

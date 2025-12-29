@@ -10,12 +10,12 @@ interface DevUser {
 }
 
 const DEV_USERS: DevUser[] = [
-  // Internal Portal Users
-  { email: 'ramesh@systech.com', name: 'Ramesh', role: 'admin', tenant: 'Systech-erp.ai', password: 'systech@123' },
-  { email: 'mohan@systech.com', name: 'Mohan', role: 'support', tenant: 'Systech-erp.ai', password: 'systech@123' },
-  { email: 'sakthi@systech.com', name: 'Sakthi', role: 'integrator', tenant: 'Systech-erp.ai', password: 'systech@123' },
-  { email: 'jai@systech.com', name: 'Jai', role: 'developer', tenant: 'Systech-erp.ai', password: 'systech@123' },
-  { email: 'priya@systech.com', name: 'Priya', role: 'developer', tenant: 'Systech-erp.ai', password: 'systech@123' },
+  // Internal Portal Users (password: Systech@123)
+  { email: 'ramesh@systech.com', name: 'Ramesh', role: 'admin', tenant: 'Systech-erp.ai', password: 'Systech@123' },
+  { email: 'mohan@systech.com', name: 'Mohan', role: 'support', tenant: 'Systech-erp.ai', password: 'Systech@123' },
+  { email: 'sakthi@systech.com', name: 'Sakthi', role: 'integrator', tenant: 'Systech-erp.ai', password: 'Systech@123' },
+  { email: 'jai@systech.com', name: 'Jai', role: 'developer', tenant: 'Systech-erp.ai', password: 'Systech@123' },
+  { email: 'priya@systech.com', name: 'Priya', role: 'developer', tenant: 'Systech-erp.ai', password: 'Systech@123' },
 ]
 
 export default function DevUserSwitcher() {
@@ -142,7 +142,7 @@ export default function DevUserSwitcher() {
           </div>
 
           <div className="p-2 border-t border-slate-200 bg-slate-50 text-xs text-slate-500 text-center">
-            All passwords: <code className="bg-slate-200 px-1 rounded">systech@123</code>
+            All passwords: <code className="bg-slate-200 px-1 rounded">Systech@123</code>
           </div>
         </div>
       )}
