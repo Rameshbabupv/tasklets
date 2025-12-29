@@ -262,7 +262,7 @@ export default function Dashboard() {
               <table className="w-full hidden md:table">
                 <thead className="bg-slate-100 dark:bg-slate-700">
                   <tr className="text-left text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-200">
-                    <th className="px-4 py-4">ID</th>
+                    <th className="px-4 py-4">Key</th>
                     <th className="px-4 py-4">Subject</th>
                     <th className="px-4 py-4">Type</th>
                     <th className="px-4 py-4">Status</th>
@@ -281,7 +281,14 @@ export default function Dashboard() {
                       transition={{ delay: 0.5 + index * 0.05 }}
                       className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/50 dark:hover:from-purple-900/20 dark:hover:to-blue-900/20 transition-colors"
                     >
-                      <td className="px-4 py-4 text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>#{ticket.id}</td>
+                      <td className="px-4 py-4">
+                        <button
+                          onClick={() => setSelectedTicketId(ticket.id)}
+                          className="text-sm font-semibold text-primary hover:text-purple-600 transition-colors"
+                        >
+                          {ticket.issueKey}
+                        </button>
+                      </td>
                       <td className="px-4 py-4">
                         <button
                           onClick={() => setSelectedTicketId(ticket.id)}
@@ -343,8 +350,8 @@ export default function Dashboard() {
                             }`}>
                               {ticket.type === 'feature_request' ? '✨' : '🎫'}
                             </span>
-                            <p className="text-xs font-mono" style={{ color: 'var(--text-muted)' }}>
-                              #{ticket.id}
+                            <p className="text-xs font-mono text-primary">
+                              {ticket.issueKey}
                             </p>
                           </div>
                           <h3 className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
