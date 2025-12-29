@@ -156,49 +156,47 @@ export default function MyTickets() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-secondary)' }}>
       {/* Header */}
-      <header
-        className="border-b sticky top-0 z-10 backdrop-blur-sm bg-white/90 dark:bg-slate-900/90"
-        style={{ borderColor: 'var(--border-primary)' }}
+      <motion.header
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="bg-gradient-to-r from-white to-purple-50/30 dark:from-slate-800 dark:to-purple-900/30 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo and Title */}
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/')}
-                className="flex items-center gap-2 hover:opacity-70 transition-opacity"
-              >
-                <div className="size-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                  <span className="material-symbols-outlined text-lg">support_agent</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <button onClick={() => navigate('/')} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 text-white shadow-lg">
+                  <span className="material-symbols-outlined text-xl">support_agent</span>
                 </div>
-                <span className="hidden sm:block font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
-                  Support Desk
-                </span>
+                <div>
+                  <span className="font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Support Desk</span>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Client Portal</p>
+                </div>
               </button>
-              <span className="text-slate-300 dark:text-slate-600">|</span>
-              <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                My Tickets
-              </h1>
             </div>
 
-            {/* User Info and Actions */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-4">
               <ThemeToggle />
-              <div className="hidden sm:flex items-center gap-2">
-                <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                  {user?.name}
-                </span>
-                <button
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="text-right hidden md:block">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{user?.name}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{user?.role}</p>
+                </div>
+                <motion.button
                   onClick={logout}
-                  className="px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="text-slate-400 hover:text-primary transition-colors p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg"
+                  aria-label="Logout"
                 >
-                  Logout
-                </button>
+                  <span className="material-symbols-outlined">logout</span>
+                </motion.button>
               </div>
             </div>
           </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
