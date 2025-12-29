@@ -169,10 +169,10 @@ export default function MyTickets() {
                 className="flex items-center gap-2 hover:opacity-70 transition-opacity"
               >
                 <div className="size-8 rounded-lg bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                  T
+                  <span className="material-symbols-outlined text-lg">support_agent</span>
                 </div>
                 <span className="hidden sm:block font-bold text-lg" style={{ color: 'var(--text-primary)' }}>
-                  Tsklets
+                  Support Desk
                 </span>
               </button>
               <span className="text-slate-300 dark:text-slate-600">|</span>
