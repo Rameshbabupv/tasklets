@@ -22,9 +22,9 @@ interface Product {
 }
 
 const tierColors: Record<string, string> = {
-  enterprise: 'bg-purple-100 text-purple-700 border-purple-200',
-  business: 'bg-blue-100 text-blue-700 border-blue-200',
-  starter: 'bg-slate-100 text-slate-700 border-slate-200',
+  enterprise: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800',
+  business: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
+  starter: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-700/50 dark:text-slate-300 dark:border-slate-600',
 }
 
 const typeConfig: Record<string, { label: string; className: string; icon: string }> = {
@@ -286,12 +286,12 @@ export default function Clients() {
                   {clients.map((client) => (
                     <tr
                       key={client.id}
-                      className={`hover:bg-slate-50 ${!client.isActive ? 'opacity-50' : ''}`}
+                      className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 ${!client.isActive ? 'opacity-50' : ''}`}
                       style={!client.isActive ? { backgroundColor: 'var(--bg-tertiary)' } : undefined}
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="size-9 rounded-lg bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 font-bold text-sm">
+                          <div className="size-9 rounded-lg bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-600 dark:to-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-200 font-bold text-sm">
                             {client.name.charAt(0)}
                           </div>
                           <button
@@ -341,7 +341,7 @@ export default function Clients() {
                         <button
                           onClick={() => toggleClientActive(client)}
                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                            client.isActive ? 'bg-green-500' : 'bg-slate-300'
+                            client.isActive ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'
                           }`}
                           title={client.isActive ? 'Active - Click to deactivate' : 'Inactive - Click to activate'}
                         >
@@ -356,14 +356,14 @@ export default function Clients() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => openUserModal(client)}
-                            className="text-slate-400 hover:text-primary"
+                            className="text-slate-500 dark:text-slate-400 hover:text-primary"
                             title="Manage Users"
                           >
                             <span className="material-symbols-outlined">group</span>
                           </button>
                           <button
                             onClick={() => openEditModal(client)}
-                            className="text-slate-400 hover:text-primary"
+                            className="text-slate-500 dark:text-slate-400 hover:text-primary"
                             title="Edit Client"
                           >
                             <span className="material-symbols-outlined">edit</span>
