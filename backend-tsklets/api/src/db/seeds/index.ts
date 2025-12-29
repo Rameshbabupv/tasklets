@@ -7,10 +7,8 @@
  *   npm run db:reset      - Drop all data and re-seed with demo data
  */
 
-import { db } from '../index.js'
-import { products } from '../schema.js'
 import { seedTenant } from './02-tenant.js'
-import { seedLookups, productsData } from './01-lookups.js'
+import { seedLookups } from './01-lookups.js'
 import { seedClients } from './demo/01-clients.js'
 import { seedUsers } from './demo/02-users.js'
 import { seedTickets } from './demo/03-tickets.js'
@@ -40,14 +38,8 @@ export async function seedDemo() {
   // 3. Seed demo users
   await seedUsers(tenantId)
 
-  // 4. Build product code map for ticket issue keys
-  const productCodes = new Map<number, string>()
-  for (const p of productsData) {
-    productCodes.set(p.id, p.code)
-  }
-
-  // 5. Seed demo tickets
-  await seedTickets(tenantId, productCodes)
+  // 4. Seed demo tickets
+  await seedTickets(tenantId)
 
   console.log('\n=== Demo Seed Complete ===\n')
   console.log('Demo Users:')
