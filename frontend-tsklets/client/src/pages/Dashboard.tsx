@@ -171,8 +171,6 @@ export default function Dashboard() {
               title="Knowledge Base"
               description="Browse helpful articles and common solutions"
               to="/help"
-              badge="Coming Soon"
-              badgeColor="bg-purple-100 text-purple-700"
             />
           </div>
         </motion.div>
