@@ -1,35 +1,46 @@
 # Tsklets - Customer Support System
 
+## Fresh Install?
+
+See `docs-tsklets/FRESH-INSTALL.md` for PostgreSQL setup and first-time configuration.
+
 ## Project Structure
 
 ```
 tsklets/
-├── frontend-tsklets/     # cd f<tab>
-│   ├── client/           # Tenant-facing portal (:3000)
-│   ├── internal/         # Internal team portal (:3001)
-│   └── shared/           # Shared packages
-│       ├── types/        # @tsklets/types
-│       ├── utils/        # @tsklets/utils
-│       └── ui/           # @tsklets/ui
-├── backend-tsklets/      # cd b<tab>
-│   └── api/              # Express REST API (:4000)
-├── infra-tsklets/        # cd i<tab>
-│   ├── docker/
-│   ├── nginx/
-│   └── scripts/
-├── docs-tsklets/         # cd d<tab>
-└── testing-tsklets/      # cd t<tab>
+├── frontend-tsklets/
+│   ├── client/           # Client Portal (:4010)
+│   ├── internal/         # Internal Portal (:4020)
+│   └── shared/           # @tsklets/types, utils, ui
+├── backend-tsklets/
+│   └── api/              # Express API (:4030)
+├── docs-tsklets/         # Documentation
+└── infra-tsklets/        # Docker, nginx, scripts
 ```
+
+## Database
+
+- **Engine:** PostgreSQL 16 (via Podman)
+- **Name:** tasklets
+- **User:** postgres
+- **Password:** change-this-secure-password
+- **URL:** `postgresql://postgres:change-this-secure-password@localhost:5432/tasklets`
 
 ## Quick Start
 
 ```bash
 npm install
 npm run dev          # Start all services
-npm run dev:api      # API only
-npm run dev:client   # Client portal only
-npm run dev:internal # Internal portal only
 ```
+
+## Test Users
+
+**Password:** `Systech@123`
+
+| Portal | Email | Role |
+|--------|-------|------|
+| Internal (:4020) | ramesh@systech.com | admin |
+| Client (:4010) | john@acme.com | user |
 
 ## Guidelines
 
@@ -38,16 +49,10 @@ npm run dev:internal # Internal portal only
 3. Use Serena memories for context (`.serena/memories/`)
 4. Track work with beads (`bd ready`, `bd show <id>`)
 
-## Serena Memories
+## Seed Commands
 
-Check `.serena/memories/` for:
-- `architecture-decisions.md` - Stack choices, rationale
-- `patterns-and-conventions.md` - Code patterns
-- `lessons-learned.md` - What worked, what to avoid
-- `domain-knowledge.md` - Flows, roles, SLA
-- `component-map.md` - Module map
-
-## Old Project Reference
-
-If you need history or context from the original project:
-`/Users/rameshbabu/data/projects/systech/customer-support`
+```bash
+cd backend-tsklets/api
+npm run db:push        # Push schema to DB
+npm run db:seed:demo   # Seed demo data
+```
