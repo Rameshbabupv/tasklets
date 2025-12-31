@@ -9,6 +9,7 @@ import NewTicket from './pages/NewTicket'
 import TicketDetail from './pages/TicketDetail'
 import UserManagement from './pages/UserManagement'
 import KnowledgeBase from './pages/KnowledgeBase'
+import InternalTriageQueue from './pages/InternalTriageQueue'
 import DevUserSwitcher from './components/DevUserSwitcher'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -74,6 +75,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <KnowledgeBase />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/triage"
+          element={
+            <ProtectedRoute>
+              <InternalTriageQueue />
             </ProtectedRoute>
           }
         />

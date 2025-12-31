@@ -10,7 +10,7 @@ interface Ticket {
   title: string
   description: string
   type: string
-  status: 'open' | 'in_progress' | 'resolved' | 'closed'
+  status: 'pending_internal_review' | 'open' | 'in_progress' | 'waiting_for_customer' | 'rebuttal' | 'resolved' | 'closed' | 'cancelled'
   clientPriority: number
   clientSeverity: number
   internalPriority: number | null
@@ -24,7 +24,27 @@ interface Ticket {
   assigneeName: string | null
   tenantName: string
   createdAt: string
+  // Escalation fields
+  escalationReason: string | null
+  escalationNote: string | null
+  pushedToSystechAt: string | null
+  labels: string[] | null
 }
+
+// Escalation reason labels
+const escalationReasonLabels: Record<string, string> = {
+  executive_request: 'Executive Request',
+  production_down: 'Production Down',
+  compliance: 'Compliance',
+  customer_impact: 'Customer Impact',
+  other: 'Other',
+}
+
+// Helper to check if ticket is escalated
+const isEscalated = (ticket: Ticket) => ticket.labels?.includes('escalated')
+
+// Helper to check if ticket was created by Systech
+const isCreatedBySystech = (ticket: Ticket) => ticket.labels?.includes('created_by_systech')
 
 interface Attachment {
   id: number
@@ -35,7 +55,7 @@ interface Attachment {
   createdAt: string
 }
 
-const statuses = ['open', 'in_progress', 'resolved', 'closed']
+const statuses = ['pending_internal_review', 'open', 'in_progress', 'waiting_for_customer', 'rebuttal', 'resolved', 'closed', 'cancelled']
 const priorities = [1, 2, 3, 4, 5]
 
 interface Epic {
@@ -228,12 +248,24 @@ export default function TicketDetail() {
 
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="h-16 px-6 border-b border-slate-200 bg-white flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-4">
+        <header className={`h-16 px-6 border-b bg-white flex items-center justify-between shrink-0 ${isEscalated(ticket) ? 'border-red-300' : 'border-slate-200'}`}>
+          <div className="flex items-center gap-4 flex-wrap">
             <button onClick={() => navigate('/tickets')} className="text-slate-500 hover:text-slate-700">
               <span className="material-symbols-outlined">arrow_back</span>
             </button>
             <h2 className="text-lg font-bold text-slate-900">{ticket.issueKey}</h2>
+            {isEscalated(ticket) && (
+              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 flex items-center gap-1.5 animate-pulse">
+                <span className="material-symbols-outlined text-sm">priority_high</span>
+                ESCALATED
+              </span>
+            )}
+            {isCreatedBySystech(ticket) && (
+              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm">business</span>
+                INTERNAL
+              </span>
+            )}
             {ticket.productName && (
               <span className="text-sm text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{ticket.productName}</span>
             )}
@@ -265,6 +297,33 @@ export default function TicketDetail() {
           <div className="max-w-4xl mx-auto grid grid-cols-3 gap-6">
             {/* Left: Details */}
             <div className="col-span-2 space-y-6">
+              {/* Escalation Info Banner */}
+              {isEscalated(ticket) && (
+                <div className="p-4 rounded-xl bg-red-50 border border-red-200">
+                  <div className="flex items-start gap-3">
+                    <span className="material-symbols-outlined text-2xl text-red-600">priority_high</span>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-bold text-red-700 mb-1">Escalated Ticket</h3>
+                      {ticket.escalationReason && (
+                        <p className="text-sm text-red-600 mb-2">
+                          <span className="font-medium">Reason:</span> {escalationReasonLabels[ticket.escalationReason] || ticket.escalationReason}
+                        </p>
+                      )}
+                      {ticket.escalationNote && (
+                        <p className="text-sm text-red-600">
+                          <span className="font-medium">Note:</span> {ticket.escalationNote}
+                        </p>
+                      )}
+                      {ticket.pushedToSystechAt && (
+                        <p className="text-xs text-red-500 mt-2">
+                          Escalated on {new Date(ticket.pushedToSystechAt).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white rounded-xl border border-slate-200 p-6">
                 <h3 className="text-xl font-bold text-slate-900 mb-4">{ticket.title}</h3>
                 <p className="text-slate-600 whitespace-pre-wrap">{ticket.description || 'No description provided.'}</p>
@@ -344,7 +403,7 @@ export default function TicketDetail() {
                 >
                   {statuses.map((s) => (
                     <option key={s} value={s}>
-                      {s.replace('_', ' ').toUpperCase()}
+                      {s.replace(/_/g, ' ').toUpperCase()}
                     </option>
                   ))}
                 </select>

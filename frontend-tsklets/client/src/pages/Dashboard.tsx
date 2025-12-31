@@ -59,6 +59,7 @@ export default function Dashboard() {
     open: tickets.filter((t) => t.status === 'open').length,
     inProgress: tickets.filter((t) => t.status === 'in_progress').length,
     resolved: tickets.filter((t) => t.status === 'resolved').length,
+    pendingReview: tickets.filter((t) => t.status === 'pending_internal_review').length,
   }
 
   return (
@@ -135,7 +136,7 @@ export default function Dashboard() {
           className="mb-8"
         >
           <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Quick Access</h2>
-          <div className={`grid grid-cols-1 sm:grid-cols-2 ${user?.role === 'company_admin' ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4 sm:gap-6`}>
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${user?.role === 'company_admin' ? 'lg:grid-cols-5' : 'lg:grid-cols-3'} gap-4 sm:gap-6`}>
             <div onClick={() => setShowNewTicketModal(true)} className="cursor-pointer">
               <ModuleCard
                 emoji="🎫"
@@ -157,14 +158,26 @@ export default function Dashboard() {
               badgeColor={stats.open > 5 ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}
             />
             {user?.role === 'company_admin' && (
-              <ModuleCard
-                emoji="👥"
-                title="User Management"
-                description="Create and manage users in your organization"
-                to="/users"
-                badge="Admin Only"
-                badgeColor="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-              />
+              <>
+                <ModuleCard
+                  emoji="📥"
+                  title="Internal Triage"
+                  description="Review and route incoming tickets before escalation"
+                  count={stats.pendingReview}
+                  countLabel="Pending"
+                  to="/triage"
+                  badge={stats.pendingReview > 0 ? 'Action Needed' : undefined}
+                  badgeColor="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                />
+                <ModuleCard
+                  emoji="👥"
+                  title="User Management"
+                  description="Create and manage users in your organization"
+                  to="/users"
+                  badge="Admin Only"
+                  badgeColor="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                />
+              </>
             )}
             <ModuleCard
               emoji="📚"

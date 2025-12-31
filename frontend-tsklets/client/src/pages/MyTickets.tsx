@@ -282,8 +282,11 @@ export default function MyTickets() {
                     }}
                   >
                     <option value="all">All Status</option>
+                    <option value="pending_internal_review">Pending Review</option>
                     <option value="open">Open</option>
                     <option value="in_progress">In Progress</option>
+                    <option value="waiting_for_customer">Waiting for Customer</option>
+                    <option value="rebuttal">Rebuttal</option>
                     <option value="resolved">Resolved</option>
                     <option value="closed">Closed</option>
                   </select>

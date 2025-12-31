@@ -45,10 +45,10 @@ export type UserRole =
 
 // Ticket
 export interface Ticket {
-  id: number
+  id: number | string
   title: string
   description?: string
-  type?: 'support' | 'feature_request'
+  type?: 'support' | 'feature_request' | 'epic' | 'feature' | 'task' | 'bug' | 'spike' | 'note'
   status: TicketStatus
   clientPriority: number
   clientSeverity: number
@@ -63,11 +63,39 @@ export interface Ticket {
   integratorId?: number
   tenantId: number
   clientId?: number  // Which client created the ticket
+  // Escalation fields
+  escalationReason?: EscalationReason
+  escalationNote?: string
+  pushedToSystechAt?: string  // When ticket was pushed/escalated to Systech (SLA start)
+  pushedToSystechBy?: number  // Who pushed it
+  labels?: string[]  // Includes 'escalated', 'reassigned_to_internal', 'created_by_systech'
+  // Other fields
+  issueKey?: string
+  dueDate?: string
+  storyPoints?: number
+  estimate?: string
+  resolution?: string
+  resolutionNote?: string
   createdAt: string
   updatedAt: string
 }
 
-export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed'
+export type TicketStatus = 'pending_internal_review' | 'open' | 'in_progress' | 'waiting_for_customer' | 'rebuttal' | 'resolved' | 'closed' | 'cancelled'
+
+export type EscalationReason = 'executive_request' | 'production_down' | 'compliance' | 'customer_impact' | 'other'
+
+// Watcher on a ticket
+export interface TicketWatcher {
+  id: number
+  ticketId: number
+  userId: number
+  user?: {
+    id: number
+    name: string
+    email: string
+  }
+  createdAt: string
+}
 
 // Attachment
 export interface Attachment {

@@ -6,6 +6,10 @@ interface StatusBadgeProps {
 }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
+  pending_internal_review: {
+    label: 'Pending Review',
+    className: 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300',
+  },
   open: {
     label: 'Open',
     className: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300',
@@ -13,6 +17,14 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   in_progress: {
     label: 'In Progress',
     className: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+  },
+  waiting_for_customer: {
+    label: 'Waiting',
+    className: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300',
+  },
+  rebuttal: {
+    label: 'Rebuttal',
+    className: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300',
   },
   review: {
     label: 'Review',
