@@ -47,11 +47,14 @@ authRoutes.post('/signup', async (req, res) => {
       role: 'user',
     }).returning()
 
+    // Internal users are those with @systech.com email domain
+    const isInternal = user.email.endsWith('@systech.com')
+
     const token = generateToken({
       userId: user.id,
       tenantId: user.tenantId,
       clientId: user.clientId,
-      isInternal: user.clientId === null,
+      isInternal,
       role: user.role!,
     })
 
@@ -63,7 +66,7 @@ authRoutes.post('/signup', async (req, res) => {
         role: user.role,
         tenantId: user.tenantId,
         clientId: user.clientId,
-        isInternal: user.clientId === null,
+        isInternal,
       },
       token,
     })
@@ -98,7 +101,8 @@ authRoutes.post('/signin', async (req, res) => {
       return res.status(401).json({ error: 'Account disabled' })
     }
 
-    const isInternal = user.clientId === null
+    // Internal users are those with @systech.com email domain
+    const isInternal = user.email.endsWith('@systech.com')
 
     const token = generateToken({
       userId: user.id,
@@ -152,7 +156,8 @@ authRoutes.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Account disabled' })
     }
 
-    const isInternal = user.clientId === null
+    // Internal users are those with @systech.com email domain
+    const isInternal = user.email.endsWith('@systech.com')
 
     const token = generateToken({
       userId: user.id,
@@ -205,7 +210,8 @@ authRoutes.get('/me', async (req, res) => {
       return res.status(404).json({ error: 'User not found' })
     }
 
-    const isInternal = user.clientId === null
+    // Internal users are those with @systech.com email domain
+    const isInternal = user.email.endsWith('@systech.com')
 
     res.json({
       user: {

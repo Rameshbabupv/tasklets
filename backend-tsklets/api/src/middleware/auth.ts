@@ -9,8 +9,8 @@ if (!JWT_SECRET) {
 export interface JWTPayload {
   userId: number
   tenantId: number        // Owner company (SaaS customer)
-  clientId: number | null // null = internal user, number = client user
-  isInternal: boolean     // Convenience flag: true if clientId is null
+  clientId: number | null // Client company the user belongs to
+  isInternal: boolean     // true if user email ends with @systech.com
   role: string
 }
 

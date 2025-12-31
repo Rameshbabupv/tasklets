@@ -51,7 +51,8 @@ userRoutes.get('/internal', requireInternal, async (req, res) => {
   try {
     const { tenantId } = req.user!
 
-    const internalUsers = await db.select({
+    // Internal users are those with @systech.com email domain
+    const allUsers = await db.select({
       id: users.id,
       email: users.email,
       name: users.name,
@@ -59,10 +60,9 @@ userRoutes.get('/internal', requireInternal, async (req, res) => {
       isActive: users.isActive,
       createdAt: users.createdAt,
     }).from(users)
-      .where(and(
-        eq(users.tenantId, tenantId),
-        eq(users.clientId, null as any) // Internal users have no client
-      ))
+      .where(eq(users.tenantId, tenantId))
+
+    const internalUsers = allUsers.filter(u => u.email.endsWith('@systech.com'))
 
     res.json(internalUsers)
   } catch (error) {
@@ -100,7 +100,7 @@ userRoutes.post('/', requireInternal, async (req, res) => {
       name,
       role: role || 'user',
       tenantId,
-      clientId: clientId || null, // null = internal user
+      clientId: clientId || null, // Internal users: email ending with @systech.com
       passwordHash,
     }).returning()
 
