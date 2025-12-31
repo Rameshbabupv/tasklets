@@ -80,20 +80,12 @@ export default function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Persist collapsed state in localStorage
-  const [collapsed, setCollapsed] = useState(() => {
-    const saved = localStorage.getItem('sidebar-collapsed')
-    return saved === 'true'
-  })
+  // Sidebar is collapsed by default, expands on hover
+  const [collapsed, setCollapsed] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [showNewTicketModal, setShowNewTicketModal] = useState(false)
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
   const [ticketStats, setTicketStats] = useState({ total: 0, pendingReview: 0 })
-
-  // Save collapsed state
-  useEffect(() => {
-    localStorage.setItem('sidebar-collapsed', String(collapsed))
-  }, [collapsed])
 
   // Check password change requirement
   useEffect(() => {
@@ -150,15 +142,6 @@ export default function AppLayout() {
           >
             <span className="material-symbols-outlined">menu</span>
           </button>
-          <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="hidden lg:flex p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            <span className="material-symbols-outlined text-xl">
-              {collapsed ? 'menu_open' : 'menu'}
-            </span>
-          </button>
           <div className="flex items-center gap-2.5">
             <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md">
               <span className="material-symbols-outlined text-lg">support_agent</span>
@@ -188,8 +171,10 @@ export default function AppLayout() {
         </div>
       </header>
 
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar - Expands on hover */}
       <aside
+        onMouseEnter={() => setCollapsed(false)}
+        onMouseLeave={() => setCollapsed(true)}
         className={`hidden lg:flex flex-col fixed left-0 top-14 bottom-0 ${sidebarWidth} border-r p-3 transition-all duration-300 z-30`}
         style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}
       >
@@ -214,7 +199,7 @@ export default function AppLayout() {
           <SidebarLink icon="home" label="Dashboard" to="/" collapsed={collapsed} />
           <SidebarLink
             icon="confirmation_number"
-            label="My Tickets"
+            label="Tickets"
             to="/tickets"
             badge={ticketStats.total}
             badgeColor="bg-slate-500"
@@ -308,7 +293,7 @@ export default function AppLayout() {
               <div className="space-y-1">
                 <SidebarLink icon="add_circle" label="Create Ticket" onClick={() => { setShowNewTicketModal(true); setMobileOpen(false) }} primary />
                 <SidebarLink icon="home" label="Dashboard" to="/" />
-                <SidebarLink icon="confirmation_number" label="My Tickets" to="/tickets" badge={ticketStats.total} badgeColor="bg-slate-500" />
+                <SidebarLink icon="confirmation_number" label="Tickets" to="/tickets" badge={ticketStats.total} badgeColor="bg-slate-500" />
                 {isCompanyAdmin && <SidebarLink icon="inbox" label="Internal Triage" to="/triage" badge={ticketStats.pendingReview} badgeColor="bg-orange-500" />}
                 <SidebarLink icon="menu_book" label="Knowledge Base" to="/help" />
                 {isCompanyAdmin && <SidebarLink icon="group" label="User Management" to="/users" />}
