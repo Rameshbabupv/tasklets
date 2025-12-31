@@ -55,6 +55,7 @@ export async function seedClients(tenantId: number) {
     // Assign products to client
     for (const productId of productIds) {
       await db.insert(clientProducts).values({
+        tenantId,
         clientId: client.id,
         productId,
       }).onConflictDoNothing()

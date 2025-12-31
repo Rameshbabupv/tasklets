@@ -205,6 +205,7 @@ export async function seedTickets(tenantId: number) {
   console.log('Seeding demo comments...')
   for (const c of commentsData) {
     await db.insert(ticketComments).values({
+      tenantId,
       ticketId: c.ticketId,
       userId: c.userId,
       content: c.content,
@@ -217,6 +218,7 @@ export async function seedTickets(tenantId: number) {
   console.log('Seeding demo ticket links...')
   for (const l of ticketLinksData) {
     await db.insert(ticketLinks).values({
+      tenantId,
       sourceTicketId: l.sourceTicketId,
       targetTicketId: l.targetTicketId,
       linkType: l.linkType,
