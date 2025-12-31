@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { db } from '../db/index.js'
 import { epics, features, devTasks, sprints, users, products, taskAssignments } from '../db/schema.js'
-import { eq, desc, sql, and, or, lt, isNotNull } from 'drizzle-orm'
+import { eq, desc, sql, and, or, lt, isNotNull, inArray } from 'drizzle-orm'
 import { authenticate, requireInternal } from '../middleware/auth.js'
 
 export const executiveRoutes = Router()
@@ -221,14 +221,14 @@ executiveRoutes.get('/team-productivity', async (req, res) => {
           storyPoints: sql<number>`coalesce(sum(${devTasks.storyPoints}), 0)::int`,
           completedPoints: sql<number>`coalesce(sum(${devTasks.storyPoints}) filter (where ${devTasks.status} = 'done'), 0)::int`,
         }).from(devTasks)
-          .where(sql`${devTasks.id} = ANY(${taskIds})`)
+          .where(inArray(devTasks.id, taskIds))
 
         // Extract code stats from metadata (if tracked)
         const tasksWithMeta = await db.select({
           metadata: devTasks.metadata,
         }).from(devTasks)
           .where(and(
-            sql`${devTasks.id} = ANY(${taskIds})`,
+            inArray(devTasks.id, taskIds),
             isNotNull(devTasks.metadata)
           ))
 
@@ -520,7 +520,7 @@ executiveRoutes.get('/products', async (req, res) => {
         if (epicIds.length > 0) {
           const productFeatures = await db.select({ id: features.id })
             .from(features)
-            .where(sql`${features.epicId} = ANY(${epicIds})`)
+            .where(inArray(features.epicId, epicIds))
 
           const featureIds = productFeatures.map(f => f.id)
 
@@ -529,7 +529,7 @@ executiveRoutes.get('/products', async (req, res) => {
               total: sql<number>`count(*)::int`,
               completed: sql<number>`count(*) filter (where ${devTasks.status} = 'done')::int`,
             }).from(devTasks)
-              .where(sql`${devTasks.featureId} = ANY(${featureIds})`)
+              .where(inArray(devTasks.featureId, featureIds))
 
             taskStats = stats[0] || { total: 0, completed: 0 }
           }

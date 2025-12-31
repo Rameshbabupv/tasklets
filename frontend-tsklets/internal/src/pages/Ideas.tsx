@@ -57,7 +57,7 @@ export default function Ideas() {
 
   async function fetchIdeas() {
     try {
-      const res = await fetch('http://localhost:4000/api/ideas', {
+      const res = await fetch('/api/ideas', {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
@@ -318,7 +318,7 @@ function CreateIdeaModal({ onClose, onCreated }: { onClose: () => void, onCreate
 
     setSubmitting(true)
     try {
-      const res = await fetch('http://localhost:4000/api/ideas', {
+      const res = await fetch('/api/ideas', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

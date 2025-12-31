@@ -79,7 +79,7 @@ export default function IdeaDetail() {
 
   async function fetchIdea() {
     try {
-      const res = await fetch(`http://localhost:4000/api/ideas/${id}`, {
+      const res = await fetch(`/api/ideas/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
@@ -94,7 +94,7 @@ export default function IdeaDetail() {
 
   async function updateStatus(status: string) {
     try {
-      const res = await fetch(`http://localhost:4000/api/ideas/${id}`, {
+      const res = await fetch(`/api/ideas/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -121,7 +121,7 @@ export default function IdeaDetail() {
 
   async function updateVisibility(visibility: string) {
     try {
-      const res = await fetch(`http://localhost:4000/api/ideas/${id}`, {
+      const res = await fetch(`/api/ideas/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -145,7 +145,7 @@ export default function IdeaDetail() {
 
     setSubmittingComment(true)
     try {
-      const res = await fetch(`http://localhost:4000/api/ideas/${id}/comments`, {
+      const res = await fetch(`/api/ideas/${id}/comments`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -168,7 +168,7 @@ export default function IdeaDetail() {
 
   async function toggleReaction(reaction: 'thumbs_up' | 'heart' | 'fire') {
     try {
-      await fetch(`http://localhost:4000/api/ideas/${id}/reactions`, {
+      await fetch(`/api/ideas/${id}/reactions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
