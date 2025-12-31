@@ -3,15 +3,24 @@ import { nanoid } from 'nanoid'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
+import fs from 'fs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
+// Get uploads directory from environment variable or use default
+const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads')
+
+// Ensure uploads directory exists
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true })
+  console.log(`Created uploads directory: ${UPLOADS_DIR}`)
+}
+
 // Configure storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadsDir = path.join(__dirname, '../../uploads')
-    cb(null, uploadsDir)
+    cb(null, UPLOADS_DIR)
   },
   filename: (req, file, cb) => {
     // Generate unique filename: {nanoid}-{original-name}

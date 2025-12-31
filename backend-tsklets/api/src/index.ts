@@ -23,6 +23,9 @@ import { requirementRoutes } from './routes/requirements.js'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
+// Get uploads directory from environment variable or use default
+const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(process.cwd(), 'uploads')
+
 const app = express()
 const PORT = parseInt(process.env.PORT || '4000')
 const HOST = process.env.HOST || '0.0.0.0'
@@ -63,7 +66,7 @@ app.use(express.json())
 app.use('/api/auth', authLimiter)
 
 // Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')))
+app.use('/uploads', express.static(UPLOADS_DIR))
 
 // Routes
 app.use('/api/auth', authRoutes)

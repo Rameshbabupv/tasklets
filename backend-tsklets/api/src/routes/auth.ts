@@ -127,6 +127,60 @@ authRoutes.post('/signin', async (req, res) => {
   }
 })
 
+// Alias: /login -> /signin for backwards compatibility
+authRoutes.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body
+
+    // Find user
+    const [user] = await db.select().from(users)
+      .where(eq(users.email, email))
+      .limit(1)
+
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' })
+    }
+
+    // Verify password
+    const valid = await bcrypt.compare(password, user.passwordHash)
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid credentials' })
+    }
+
+    // Check user is active
+    if (!user.isActive) {
+      return res.status(401).json({ error: 'Account disabled' })
+    }
+
+    const isInternal = user.clientId === null
+
+    const token = generateToken({
+      userId: user.id,
+      tenantId: user.tenantId,
+      clientId: user.clientId,
+      isInternal,
+      role: user.role!,
+    })
+
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        tenantId: user.tenantId,
+        clientId: user.clientId,
+        isInternal,
+        requirePasswordChange: user.requirePasswordChange || false,
+      },
+      token,
+    })
+  } catch (error) {
+    console.error('Login error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 // Get current user
 authRoutes.get('/me', async (req, res) => {
   const authHeader = req.headers.authorization
