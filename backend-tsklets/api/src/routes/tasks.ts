@@ -1,9 +1,9 @@
 import { Router } from 'express'
 import { db } from '../db/index.js'
-import { devTasks, taskAssignments, supportTicketTasks, tickets, features, epics } from '../db/schema.js'
+import { devTasks, taskAssignments, supportTicketTasks, tickets, features, epics, products } from '../db/schema.js'
 import { eq, desc, inArray } from 'drizzle-orm'
 import { authenticate, requireInternal } from '../middleware/auth.js'
-import { generateIssueKey } from '../utils/issue-key.js'
+import { generateIssueKey } from '../utils/issueKey.js'
 
 export const taskRoutes = Router()
 
@@ -41,10 +41,11 @@ taskRoutes.post('/', requireInternal, async (req, res) => {
     }
 
     const taskType = type || 'task'
-    const issueKey = await generateIssueKey(epic.productId, taskType === 'bug' ? 'B' : 'T')
+    const { key: issueKey } = await generateIssueKey(epic.productId, taskType === 'bug' ? 'bug' : 'task')
 
     const [task] = await db.insert(devTasks).values({
       tenantId,
+      productId: epic.productId,
       featureId,
       issueKey,
       title,
@@ -244,7 +245,97 @@ taskRoutes.post('/:id/assign', requireInternal, async (req, res) => {
   }
 })
 
-// Spawn task from support ticket (owner only)
+// Create dev task from support ticket (owner only)
+// This creates a dev task with role assignments (implementor, developer, tester)
+// and automatically assigns the implementor to the support ticket, moving it to in_progress
+taskRoutes.post('/from-support-ticket/:ticketId', requireInternal, async (req, res) => {
+  try {
+    const { tenantId, userId } = req.user!
+    const { ticketId } = req.params
+    const {
+      title, description, type,
+      // Role assignments
+      implementorId, developerId, testerId,
+      // Product structure (optional)
+      moduleId, componentId, addonId,
+      // Optional feature link
+      featureId,
+      // Bug-specific
+      severity, environment,
+    } = req.body
+
+    // Validate required fields
+    if (!implementorId || !developerId || !testerId) {
+      return res.status(400).json({ error: 'implementorId, developerId, and testerId are required' })
+    }
+
+    // Verify ticket exists (ticketId is a nanoUUID string)
+    const [ticket] = await db.select().from(tickets)
+      .where(eq(tickets.id, ticketId))
+      .limit(1)
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' })
+    }
+
+    // Get productId from ticket
+    const productId = ticket.productId
+
+    const taskType = type || 'bug'
+    const { key: issueKey } = await generateIssueKey(productId, taskType === 'bug' ? 'bug' : 'task')
+
+    // Create dev task with role assignments
+    const [task] = await db.insert(devTasks).values({
+      tenantId,
+      productId,
+      featureId: featureId || null,
+      issueKey,
+      title: title || `Fix: ${ticket.title}`,
+      description: description || ticket.description || '',
+      type: taskType,
+      status: 'todo',
+      priority: ticket.internalPriority || ticket.clientPriority || 3,
+      createdBy: userId,
+      reporterId: ticket.reporterId || ticket.createdBy,
+      // Role assignments
+      implementorId,
+      developerId,
+      testerId,
+      // Product structure
+      moduleId: moduleId || null,
+      componentId: componentId || null,
+      addonId: addonId || null,
+      // Direct link to support ticket
+      supportTicketId: ticketId,
+      // Bug-specific
+      severity: taskType === 'bug' ? (severity || 'major') : null,
+      environment: taskType === 'bug' ? (environment || 'production') : null,
+    }).returning()
+
+    // Link ticket to task via join table
+    await db.insert(supportTicketTasks).values({
+      tenantId,
+      ticketId,
+      taskId: task.id,
+    })
+
+    // Auto-assign implementor to support ticket and move to in_progress
+    await db.update(tickets)
+      .set({
+        assignedTo: implementorId,
+        status: 'in_progress',
+        updatedAt: new Date(),
+      })
+      .where(eq(tickets.id, ticketId))
+
+    res.status(201).json({ task, message: 'Dev task created and ticket assigned to implementor' })
+  } catch (error) {
+    console.error('Create dev task from ticket error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Legacy: Spawn task from support ticket (kept for backwards compatibility)
 taskRoutes.post('/spawn-from-ticket/:ticketId', requireInternal, async (req, res) => {
   try {
     const { tenantId, userId } = req.user!
@@ -255,9 +346,9 @@ taskRoutes.post('/spawn-from-ticket/:ticketId', requireInternal, async (req, res
       return res.status(400).json({ error: 'featureId is required' })
     }
 
-    // Verify ticket exists
+    // Verify ticket exists (ticketId is a nanoUUID string)
     const [ticket] = await db.select().from(tickets)
-      .where(eq(tickets.id, parseInt(ticketId)))
+      .where(eq(tickets.id, ticketId))
       .limit(1)
 
     if (!ticket) {
@@ -277,11 +368,12 @@ taskRoutes.post('/spawn-from-ticket/:ticketId', requireInternal, async (req, res
     }
 
     const taskType = type || 'bug'
-    const issueKey = await generateIssueKey(epic.productId, taskType === 'bug' ? 'B' : 'T')
+    const { key: issueKey } = await generateIssueKey(epic.productId, taskType === 'bug' ? 'bug' : 'task')
 
     // Create dev task
     const [task] = await db.insert(devTasks).values({
       tenantId,
+      productId: epic.productId,
       featureId,
       issueKey,
       title: title || `Bug from ticket: ${ticket.title}`,
@@ -291,18 +383,15 @@ taskRoutes.post('/spawn-from-ticket/:ticketId', requireInternal, async (req, res
       priority: ticket.internalPriority || ticket.clientPriority || 3,
       createdBy: userId,
       reporterId: ticket.reporterId || ticket.createdBy,
+      supportTicketId: ticketId,
       severity: taskType === 'bug' ? (severity || 'major') : null,
       environment: taskType === 'bug' ? (environment || 'production') : null,
-      metadata: {
-        sourceTicketId: parseInt(ticketId),
-        sourceTicketTitle: ticket.title,
-      },
     }).returning()
 
     // Link ticket to task
     await db.insert(supportTicketTasks).values({
       tenantId,
-      ticketId: parseInt(ticketId),
+      ticketId,
       taskId: task.id,
     })
 

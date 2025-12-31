@@ -41,8 +41,8 @@ export function getTypeCode(type: string): string {
 
 /**
  * Generate the next issue key for a product and type
- * Format: {PRODUCT_CODE}-{TYPE_CODE}-{SEQUENCE}
- * Example: TKL-S-001, HRMS-F-023
+ * Format: {PRODUCT_CODE}-{TYPE_CODE}{SEQUENCE}
+ * Example: CRM-S001, HRM-F023, TSKLT-B001
  *
  * @param productId - Product ID
  * @param type - Ticket type (e.g., 'support', 'epic', 'feature')
@@ -109,8 +109,8 @@ export async function generateIssueKey(
   // Format sequence as 3-digit padded number (001, 002, ..., 999, 1000, ...)
   const paddedNum = result.toString().padStart(3, '0')
 
-  // Generate the key and ID
-  const key = `${product.code}-${typeCode}-${paddedNum}`
+  // Generate the key and ID (format: CRM-B001, HRM-F023)
+  const key = `${product.code}-${typeCode}${paddedNum}`
   const id = generateTicketId()
 
   return { key, id }
@@ -118,7 +118,7 @@ export async function generateIssueKey(
 
 /**
  * Parse an issue key into its components
- * @param key - Issue key (e.g., 'TKL-S-001')
+ * @param key - Issue key (e.g., 'CRM-B001')
  * @returns { productCode, typeCode, sequenceNum } or null if invalid
  */
 export function parseIssueKey(key: string): {
@@ -126,9 +126,23 @@ export function parseIssueKey(key: string): {
   typeCode: string
   sequenceNum: number
 } | null {
-  const match = key.match(/^([A-Z0-9-]+)-([A-Z])-(\d+)$/)
+  // Match new format: CRM-B001, HRM-F023
+  const match = key.match(/^([A-Z0-9]+)-([A-Z])(\d+)$/)
   if (!match) {
-    return null
+    // Try legacy format: TKL-S-001
+    const legacyMatch = key.match(/^([A-Z0-9-]+)-([A-Z])-(\d+)$/)
+    if (!legacyMatch) {
+      return null
+    }
+    const [, productCode, typeCode, seqStr] = legacyMatch
+    if (!VALID_TYPE_CODES.has(typeCode)) {
+      return null
+    }
+    return {
+      productCode,
+      typeCode,
+      sequenceNum: parseInt(seqStr, 10),
+    }
   }
 
   const [, productCode, typeCode, seqStr] = match

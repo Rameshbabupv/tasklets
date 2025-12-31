@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { db } from '../db/index.js'
-import { products, clientProducts, clients, epics, features, devTasks } from '../db/schema.js'
+import { products, clientProducts, clients, epics, features, devTasks, modules, components, addons } from '../db/schema.js'
 import { eq } from 'drizzle-orm'
 import { authenticate, requireInternal } from '../middleware/auth.js'
 
@@ -273,6 +273,276 @@ productRoutes.get('/:id/dashboard', requireInternal, async (req, res) => {
     })
   } catch (error) {
     console.error('Get product dashboard error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ========================================
+// MODULES (Product → Modules)
+// ========================================
+
+// List modules for a product
+productRoutes.get('/:id/modules', async (req, res) => {
+  try {
+    const { id } = req.params
+    const productId = parseInt(id)
+
+    const moduleList = await db.select().from(modules)
+      .where(eq(modules.productId, productId))
+      .orderBy(modules.name)
+
+    res.json(moduleList)
+  } catch (error) {
+    console.error('List modules error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Create module for a product
+productRoutes.post('/:id/modules', requireInternal, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { name, description } = req.body
+    const { tenantId } = req.user!
+    const productId = parseInt(id)
+
+    if (!name) {
+      return res.status(400).json({ error: 'Module name is required' })
+    }
+
+    const [module] = await db.insert(modules).values({
+      tenantId,
+      productId,
+      name,
+      description,
+    }).returning()
+
+    res.status(201).json(module)
+  } catch (error) {
+    console.error('Create module error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Update module
+productRoutes.patch('/modules/:moduleId', requireInternal, async (req, res) => {
+  try {
+    const { moduleId } = req.params
+    const { name, description } = req.body
+
+    const [module] = await db.update(modules)
+      .set({ name, description })
+      .where(eq(modules.id, parseInt(moduleId)))
+      .returning()
+
+    if (!module) {
+      return res.status(404).json({ error: 'Module not found' })
+    }
+
+    res.json(module)
+  } catch (error) {
+    console.error('Update module error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Delete module
+productRoutes.delete('/modules/:moduleId', requireInternal, async (req, res) => {
+  try {
+    const { moduleId } = req.params
+    const mid = parseInt(moduleId)
+
+    // Delete components first
+    await db.delete(components).where(eq(components.moduleId, mid))
+
+    // Delete module
+    const [deleted] = await db.delete(modules)
+      .where(eq(modules.id, mid))
+      .returning()
+
+    if (!deleted) {
+      return res.status(404).json({ error: 'Module not found' })
+    }
+
+    res.json({ message: 'Module deleted' })
+  } catch (error) {
+    console.error('Delete module error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ========================================
+// COMPONENTS (Module → Components)
+// ========================================
+
+// List components for a module
+productRoutes.get('/modules/:moduleId/components', async (req, res) => {
+  try {
+    const { moduleId } = req.params
+
+    const componentList = await db.select().from(components)
+      .where(eq(components.moduleId, parseInt(moduleId)))
+      .orderBy(components.name)
+
+    res.json(componentList)
+  } catch (error) {
+    console.error('List components error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Create component for a module
+productRoutes.post('/modules/:moduleId/components', requireInternal, async (req, res) => {
+  try {
+    const { moduleId } = req.params
+    const { name, description } = req.body
+    const { tenantId } = req.user!
+
+    if (!name) {
+      return res.status(400).json({ error: 'Component name is required' })
+    }
+
+    const [component] = await db.insert(components).values({
+      tenantId,
+      moduleId: parseInt(moduleId),
+      name,
+      description,
+    }).returning()
+
+    res.status(201).json(component)
+  } catch (error) {
+    console.error('Create component error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Update component
+productRoutes.patch('/components/:componentId', requireInternal, async (req, res) => {
+  try {
+    const { componentId } = req.params
+    const { name, description } = req.body
+
+    const [component] = await db.update(components)
+      .set({ name, description })
+      .where(eq(components.id, parseInt(componentId)))
+      .returning()
+
+    if (!component) {
+      return res.status(404).json({ error: 'Component not found' })
+    }
+
+    res.json(component)
+  } catch (error) {
+    console.error('Update component error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Delete component
+productRoutes.delete('/components/:componentId', requireInternal, async (req, res) => {
+  try {
+    const { componentId } = req.params
+
+    const [deleted] = await db.delete(components)
+      .where(eq(components.id, parseInt(componentId)))
+      .returning()
+
+    if (!deleted) {
+      return res.status(404).json({ error: 'Component not found' })
+    }
+
+    res.json({ message: 'Component deleted' })
+  } catch (error) {
+    console.error('Delete component error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ========================================
+// ADDONS (Product → Addons)
+// ========================================
+
+// List addons for a product
+productRoutes.get('/:id/addons', async (req, res) => {
+  try {
+    const { id } = req.params
+    const productId = parseInt(id)
+
+    const addonList = await db.select().from(addons)
+      .where(eq(addons.productId, productId))
+      .orderBy(addons.name)
+
+    res.json(addonList)
+  } catch (error) {
+    console.error('List addons error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Create addon for a product
+productRoutes.post('/:id/addons', requireInternal, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { name, description } = req.body
+    const { tenantId } = req.user!
+    const productId = parseInt(id)
+
+    if (!name) {
+      return res.status(400).json({ error: 'Addon name is required' })
+    }
+
+    const [addon] = await db.insert(addons).values({
+      tenantId,
+      productId,
+      name,
+      description,
+    }).returning()
+
+    res.status(201).json(addon)
+  } catch (error) {
+    console.error('Create addon error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Update addon
+productRoutes.patch('/addons/:addonId', requireInternal, async (req, res) => {
+  try {
+    const { addonId } = req.params
+    const { name, description } = req.body
+
+    const [addon] = await db.update(addons)
+      .set({ name, description })
+      .where(eq(addons.id, parseInt(addonId)))
+      .returning()
+
+    if (!addon) {
+      return res.status(404).json({ error: 'Addon not found' })
+    }
+
+    res.json(addon)
+  } catch (error) {
+    console.error('Update addon error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Delete addon
+productRoutes.delete('/addons/:addonId', requireInternal, async (req, res) => {
+  try {
+    const { addonId } = req.params
+
+    const [deleted] = await db.delete(addons)
+      .where(eq(addons.id, parseInt(addonId)))
+      .returning()
+
+    if (!deleted) {
+      return res.status(404).json({ error: 'Addon not found' })
+    }
+
+    res.json({ message: 'Addon deleted' })
+  } catch (error) {
+    console.error('Delete addon error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

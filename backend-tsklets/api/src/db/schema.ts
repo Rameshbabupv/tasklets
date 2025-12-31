@@ -108,6 +108,40 @@ export const userProducts = pgTable('user_products', {
 })
 
 // ========================================
+// PRODUCT STRUCTURE: Modules, Components, Addons
+// ========================================
+
+// Modules (Product → Modules)
+export const modules = pgTable('modules', {
+  id: serial('id').primaryKey(),
+  tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
+  productId: integer('product_id').references(() => products.id).notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
+// Components (Module → Components)
+export const components = pgTable('components', {
+  id: serial('id').primaryKey(),
+  tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
+  moduleId: integer('module_id').references(() => modules.id).notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
+// Addons (Product → Addons)
+export const addons = pgTable('addons', {
+  id: serial('id').primaryKey(),
+  tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
+  productId: integer('product_id').references(() => products.id).notNull(),
+  name: text('name').notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
+// ========================================
 // TICKETS (Client Support & Internal Issues)
 // ========================================
 // Unified issue tracking with human-readable keys like TKL-S-001, HRMS-F-023
@@ -308,8 +342,9 @@ export const features = pgTable('features', {
 export const devTasks = pgTable('dev_tasks', {
   id: serial('id').primaryKey(),
   tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
-  featureId: integer('feature_id').references(() => features.id).notNull(),
-  issueKey: text('issue_key').unique(), // e.g., 'TSKLTS-T001' or 'TSKLTS-B001'
+  productId: integer('product_id').references(() => products.id).notNull(), // For issue key generation
+  featureId: integer('feature_id').references(() => features.id), // Optional - can be linked later
+  issueKey: text('issue_key').unique(), // e.g., 'CRM-T001' or 'CRM-B001'
   beadsId: text('beads_id'), // Link to beads CLI issue
   sprintId: integer('sprint_id'), // null = backlog, set = assigned to sprint
   parentTaskId: integer('parent_task_id'), // For subtasks (self-reference)
@@ -319,12 +354,22 @@ export const devTasks = pgTable('dev_tasks', {
     enum: ['task', 'bug']
   }).default('task'),
   status: text('status', {
-    enum: ['todo', 'in_progress', 'review', 'blocked', 'done']
+    enum: ['todo', 'in_progress', 'review', 'testing', 'blocked', 'done']
   }).default('todo'),
   priority: integer('priority').default(3),
   storyPoints: integer('story_points'), // Fibonacci: 1,2,3,5,8,13
   createdBy: integer('created_by').references(() => users.id), // Who created
   reporterId: integer('reporter_id').references(() => users.id), // Who reported (for bugs)
+  // Role assignments for dev task workflow
+  implementorId: integer('implementor_id').references(() => users.id), // Overall responsible
+  developerId: integer('developer_id').references(() => users.id), // Codes the fix
+  testerId: integer('tester_id').references(() => users.id), // Tests the fix
+  // Product structure links
+  moduleId: integer('module_id').references(() => modules.id), // Optional module
+  componentId: integer('component_id').references(() => components.id), // Optional component
+  addonId: integer('addon_id').references(() => addons.id), // Optional addon
+  // Direct link to support ticket (in addition to support_ticket_tasks join table)
+  supportTicketId: text('support_ticket_id').references(() => tickets.id), // Source support ticket
   // Time tracking
   estimate: integer('estimate'), // Estimated hours
   actualTime: integer('actual_time'), // Actual hours spent
@@ -619,6 +664,42 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   }),
   clientProducts: many(clientProducts),
   userProducts: many(userProducts),
+  modules: many(modules),
+  addons: many(addons),
+}))
+
+export const modulesRelations = relations(modules, ({ one, many }) => ({
+  tenant: one(tenants, {
+    fields: [modules.tenantId],
+    references: [tenants.id],
+  }),
+  product: one(products, {
+    fields: [modules.productId],
+    references: [products.id],
+  }),
+  components: many(components),
+}))
+
+export const componentsRelations = relations(components, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [components.tenantId],
+    references: [tenants.id],
+  }),
+  module: one(modules, {
+    fields: [components.moduleId],
+    references: [modules.id],
+  }),
+}))
+
+export const addonsRelations = relations(addons, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [addons.tenantId],
+    references: [tenants.id],
+  }),
+  product: one(products, {
+    fields: [addons.productId],
+    references: [products.id],
+  }),
 }))
 
 export const clientProductsRelations = relations(clientProducts, ({ one }) => ({
@@ -763,6 +844,10 @@ export const devTasksRelations = relations(devTasks, ({ one, many }) => ({
     fields: [devTasks.tenantId],
     references: [tenants.id],
   }),
+  product: one(products, {
+    fields: [devTasks.productId],
+    references: [products.id],
+  }),
   feature: one(features, {
     fields: [devTasks.featureId],
     references: [features.id],
@@ -782,6 +867,37 @@ export const devTasksRelations = relations(devTasks, ({ one, many }) => ({
   reporter: one(users, {
     fields: [devTasks.reporterId],
     references: [users.id],
+  }),
+  // Role assignments
+  implementor: one(users, {
+    fields: [devTasks.implementorId],
+    references: [users.id],
+  }),
+  developer: one(users, {
+    fields: [devTasks.developerId],
+    references: [users.id],
+  }),
+  tester: one(users, {
+    fields: [devTasks.testerId],
+    references: [users.id],
+  }),
+  // Product structure
+  module: one(modules, {
+    fields: [devTasks.moduleId],
+    references: [modules.id],
+  }),
+  component: one(components, {
+    fields: [devTasks.componentId],
+    references: [components.id],
+  }),
+  addon: one(addons, {
+    fields: [devTasks.addonId],
+    references: [addons.id],
+  }),
+  // Source support ticket
+  supportTicket: one(tickets, {
+    fields: [devTasks.supportTicketId],
+    references: [tickets.id],
   }),
   assignments: many(taskAssignments),
   subtasks: many(devTasks),

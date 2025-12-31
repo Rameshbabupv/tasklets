@@ -17,6 +17,7 @@ interface Ticket {
   internalSeverity: number | null
   clientId: number | null
   clientName: string | null
+  productId: number
   productCode: string | null
   productName: string | null
   creatorName: string | null
@@ -70,6 +71,30 @@ interface Feature {
   title: string
 }
 
+interface Module {
+  id: number
+  productId: number
+  name: string
+}
+
+interface Component {
+  id: number
+  moduleId: number
+  name: string
+}
+
+interface Addon {
+  id: number
+  productId: number
+  name: string
+}
+
+interface User {
+  id: number
+  name: string
+  email: string
+}
+
 export default function TicketDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -85,7 +110,7 @@ export default function TicketDetail() {
   const [internalPriority, setInternalPriority] = useState<number | ''>('')
   const [internalSeverity, setInternalSeverity] = useState<number | ''>('')
 
-  // Spawn task state
+  // Create Dev Task state
   const [showSpawnModal, setShowSpawnModal] = useState(false)
   const [epics, setEpics] = useState<Epic[]>([])
   const [features, setFeatures] = useState<Feature[]>([])
@@ -95,6 +120,20 @@ export default function TicketDetail() {
   const [taskDescription, setTaskDescription] = useState('')
   const [spawning, setSpawning] = useState(false)
   const [spawnError, setSpawnError] = useState('')
+
+  // New: Product structure
+  const [modules, setModules] = useState<Module[]>([])
+  const [components, setComponents] = useState<Component[]>([])
+  const [addons, setAddons] = useState<Addon[]>([])
+  const [selectedModuleId, setSelectedModuleId] = useState<number | ''>('')
+  const [selectedComponentId, setSelectedComponentId] = useState<number | ''>('')
+  const [selectedAddonId, setSelectedAddonId] = useState<number | ''>('')
+
+  // New: Role assignments
+  const [internalUsers, setInternalUsers] = useState<User[]>([])
+  const [implementorId, setImplementorId] = useState<number | ''>('')
+  const [developerId, setDeveloperId] = useState<number | ''>('')
+  const [testerId, setTesterId] = useState<number | ''>('')
 
   useEffect(() => {
     fetchTicket()
@@ -144,10 +183,41 @@ export default function TicketDetail() {
 
   const openSpawnModal = async () => {
     setShowSpawnModal(true)
-    setTaskTitle(`Bug from ticket: ${ticket?.title}`)
+    setTaskTitle(`Fix: ${ticket?.title}`)
     setTaskDescription(ticket?.description || '')
 
-    // Fetch all epics (assuming from all products for now)
+    // Fetch internal users for role assignments
+    try {
+      const res = await fetch('/api/users?internal=true', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      setInternalUsers(data.users || data || [])
+    } catch (err) {
+      console.error('Failed to fetch users', err)
+    }
+
+    // Fetch modules and addons for the ticket's product
+    if (ticket?.productId) {
+      try {
+        const [modulesRes, addonsRes] = await Promise.all([
+          fetch(`/api/products/${ticket.productId}/modules`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`/api/products/${ticket.productId}/addons`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ])
+        const modulesData = await modulesRes.json()
+        const addonsData = await addonsRes.json()
+        setModules(modulesData || [])
+        setAddons(addonsData || [])
+      } catch (err) {
+        console.error('Failed to fetch product structure', err)
+      }
+    }
+
+    // Fetch all epics (for optional feature link)
     try {
       const res = await fetch('/api/epics', {
         headers: { Authorization: `Bearer ${token}` },
@@ -180,10 +250,29 @@ export default function TicketDetail() {
     }
   }
 
+  const handleModuleChange = async (moduleId: string) => {
+    setSelectedModuleId(moduleId ? parseInt(moduleId) : '')
+    setSelectedComponentId('')
+    setComponents([])
+    if (moduleId) {
+      try {
+        const res = await fetch(`/api/products/modules/${moduleId}/components`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await res.json()
+        setComponents(data || [])
+      } catch (err) {
+        console.error('Failed to fetch components', err)
+      }
+    }
+  }
+
   const handleSpawnTask = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedFeatureId) {
-      setSpawnError('Please select a feature')
+
+    // Validate required role assignments
+    if (!implementorId || !developerId || !testerId) {
+      setSpawnError('Please assign Implementor, Developer, and Tester')
       return
     }
 
@@ -191,28 +280,53 @@ export default function TicketDetail() {
     setSpawnError('')
 
     try {
-      const res = await fetch(`/api/tasks/spawn-from-ticket/${id}`, {
+      const res = await fetch(`/api/tasks/from-support-ticket/${id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          featureId: selectedFeatureId,
           title: taskTitle,
           description: taskDescription,
           type: 'bug',
+          // Role assignments
+          implementorId,
+          developerId,
+          testerId,
+          // Product structure (optional)
+          moduleId: selectedModuleId || null,
+          componentId: selectedComponentId || null,
+          addonId: selectedAddonId || null,
+          // Optional feature link
+          featureId: selectedFeatureId || null,
         }),
       })
 
-      if (!res.ok) throw new Error('Failed to spawn task')
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to create dev task')
+      }
 
+      const data = await res.json()
+
+      // Reset form
       setShowSpawnModal(false)
       setSelectedEpicId('')
       setSelectedFeatureId('')
+      setSelectedModuleId('')
+      setSelectedComponentId('')
+      setSelectedAddonId('')
+      setImplementorId('')
+      setDeveloperId('')
+      setTesterId('')
       setTaskTitle('')
       setTaskDescription('')
-      alert('Dev task created successfully!')
+
+      // Refresh ticket to show updated status
+      fetchTicket()
+
+      alert(`Dev task ${data.task.issueKey} created! Ticket assigned to implementor and moved to In Progress.`)
     } catch (err: any) {
       setSpawnError(err.message)
     } finally {
@@ -279,7 +393,7 @@ export default function TicketDetail() {
               className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold transition-colors"
             >
               <span className="material-symbols-outlined text-[18px]">add_task</span>
-              Spawn Dev Task
+              Create Dev Task
             </button>
             <button
               onClick={handleSave}
@@ -467,92 +581,236 @@ export default function TicketDetail() {
         />
       )}
 
-      {/* Spawn Task Modal */}
+      {/* Create Dev Task Modal */}
       {showSpawnModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4">
-            <div className="p-6 border-b border-slate-200">
-              <h3 className="text-lg font-bold text-slate-900">Spawn Dev Task from Ticket</h3>
-              <p className="text-sm text-slate-500 mt-1">Create a development task from this support ticket</p>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200 sticky top-0 bg-white z-10">
+              <h3 className="text-lg font-bold text-slate-900">Create Development Task</h3>
+              <p className="text-sm text-slate-500 mt-1">
+                From: <span className="font-medium text-slate-700">{ticket?.issueKey}</span> • {ticket?.productName}
+              </p>
             </div>
 
-            <form onSubmit={handleSpawnTask} className="p-6 space-y-4">
+            <form onSubmit={handleSpawnTask} className="p-6 space-y-6">
               {spawnError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">{spawnError}</div>
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm flex items-center gap-2">
+                  <span className="material-symbols-outlined text-lg">error</span>
+                  {spawnError}
+                </div>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Epic *</label>
-                <select
-                  value={selectedEpicId}
-                  onChange={(e) => handleEpicChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
-                  required
-                >
-                  <option value="">Select Epic...</option>
-                  {epics.map((epic) => (
-                    <option key={epic.id} value={epic.id}>{epic.title}</option>
-                  ))}
-                </select>
+              {/* Role Assignments Section */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-lg text-emerald-600">group</span>
+                  Role Assignments *
+                </h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Implementor</label>
+                    <select
+                      value={implementorId}
+                      onChange={(e) => setImplementorId(e.target.value ? parseInt(e.target.value) : '')}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20"
+                      required
+                    >
+                      <option value="">Select...</option>
+                      {internalUsers.map((user) => (
+                        <option key={user.id} value={user.id}>{user.name}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-400 mt-1">Overall responsible</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Developer</label>
+                    <select
+                      value={developerId}
+                      onChange={(e) => setDeveloperId(e.target.value ? parseInt(e.target.value) : '')}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500/20"
+                      required
+                    >
+                      <option value="">Select...</option>
+                      {internalUsers.map((user) => (
+                        <option key={user.id} value={user.id}>{user.name}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-400 mt-1">Writes the code</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Tester</label>
+                    <select
+                      value={testerId}
+                      onChange={(e) => setTesterId(e.target.value ? parseInt(e.target.value) : '')}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-violet-500/20"
+                      required
+                    >
+                      <option value="">Select...</option>
+                      {internalUsers.map((user) => (
+                        <option key={user.id} value={user.id}>{user.name}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-400 mt-1">Tests the fix</p>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Feature *</label>
-                <select
-                  value={selectedFeatureId}
-                  onChange={(e) => setSelectedFeatureId(e.target.value ? parseInt(e.target.value) : '')}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
-                  required
-                  disabled={!selectedEpicId}
-                >
-                  <option value="">Select Feature...</option>
-                  {features.map((feature) => (
-                    <option key={feature.id} value={feature.id}>{feature.title}</option>
-                  ))}
-                </select>
+              {/* Product Structure Section */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-lg text-blue-600">category</span>
+                  Product Structure (Optional)
+                </h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Module</label>
+                    <select
+                      value={selectedModuleId}
+                      onChange={(e) => handleModuleChange(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="">Select module...</option>
+                      {modules.map((mod) => (
+                        <option key={mod.id} value={mod.id}>{mod.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Component</label>
+                    <select
+                      value={selectedComponentId}
+                      onChange={(e) => setSelectedComponentId(e.target.value ? parseInt(e.target.value) : '')}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
+                      disabled={!selectedModuleId}
+                    >
+                      <option value="">Select component...</option>
+                      {components.map((comp) => (
+                        <option key={comp.id} value={comp.id}>{comp.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Addon</label>
+                    <select
+                      value={selectedAddonId}
+                      onChange={(e) => setSelectedAddonId(e.target.value ? parseInt(e.target.value) : '')}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="">Select addon...</option>
+                      {addons.map((addon) => (
+                        <option key={addon.id} value={addon.id}>{addon.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Task Title *</label>
-                <input
-                  type="text"
-                  value={taskTitle}
-                  onChange={(e) => setTaskTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
-                  required
-                />
+              {/* Feature Link Section */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-lg text-orange-600">link</span>
+                  Link to Feature (Optional)
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Epic</label>
+                    <select
+                      value={selectedEpicId}
+                      onChange={(e) => handleEpicChange(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
+                    >
+                      <option value="">Select Epic...</option>
+                      {epics.map((epic) => (
+                        <option key={epic.id} value={epic.id}>{epic.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Feature</label>
+                    <select
+                      value={selectedFeatureId}
+                      onChange={(e) => setSelectedFeatureId(e.target.value ? parseInt(e.target.value) : '')}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
+                      disabled={!selectedEpicId}
+                    >
+                      <option value="">Select Feature...</option>
+                      {features.map((feature) => (
+                        <option key={feature.id} value={feature.id}>{feature.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-                <textarea
-                  value={taskDescription}
-                  onChange={(e) => setTaskDescription(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 resize-none"
-                  rows={3}
-                />
+              {/* Task Details Section */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-lg text-slate-600">description</span>
+                  Task Details
+                </h4>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Title *</label>
+                  <input
+                    type="text"
+                    value={taskTitle}
+                    onChange={(e) => setTaskTitle(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Description</label>
+                  <textarea
+                    value={taskDescription}
+                    onChange={(e) => setTaskDescription(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 resize-none"
+                    rows={3}
+                  />
+                </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowSpawnModal(false)
-                    setSelectedEpicId('')
-                    setSelectedFeatureId('')
-                    setSpawnError('')
-                  }}
-                  className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg text-sm font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={spawning}
-                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50"
-                >
-                  {spawning ? 'Creating...' : 'Create Bug Task'}
-                </button>
+              {/* Footer */}
+              <div className="flex justify-between items-center pt-4 border-t border-slate-200">
+                <p className="text-xs text-slate-500">
+                  Ticket will be assigned to Implementor and moved to In Progress
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowSpawnModal(false)
+                      setSelectedEpicId('')
+                      setSelectedFeatureId('')
+                      setSelectedModuleId('')
+                      setSelectedComponentId('')
+                      setSelectedAddonId('')
+                      setImplementorId('')
+                      setDeveloperId('')
+                      setTesterId('')
+                      setSpawnError('')
+                    }}
+                    className="px-4 py-2 text-slate-700 hover:bg-slate-100 rounded-lg text-sm font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={spawning}
+                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-semibold disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {spawning ? (
+                      <>
+                        <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-lg">add_task</span>
+                        Create Dev Task
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
