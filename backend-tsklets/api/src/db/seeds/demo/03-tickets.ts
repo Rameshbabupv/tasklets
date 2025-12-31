@@ -1,6 +1,9 @@
 /**
  * Demo Seed: Tickets, Comments, and Links
  * Run: npm run db:seed:demo
+ *
+ * NOTE: For standard ticket labels used by the internal triage system,
+ * see the documentation in src/db/seeds/01-lookups.ts
  */
 
 import { db } from '../../index.js'
@@ -12,7 +15,8 @@ export const ticketsData = [
     title: 'CRM Dashboard Loading Slowly',
     description: 'The main dashboard takes over 10 seconds to load. Users are complaining about productivity loss.',
     clientPriority: 3, clientSeverity: 3, internalPriority: 2, internalSeverity: 2,
-    reporterId: 6, assignedTo: 2, createdBy: 6 },
+    reporterId: 6, assignedTo: 2, createdBy: 6,
+    labels: ['escalated'] },
   { id: 'demo_acme_002', issueKey: 'CRMS-B-001', productId: 6, clientId: 1, type: 'bug', status: 'in_progress',
     title: 'Contact Search Returns Wrong Results',
     description: 'When searching for contacts with special characters in names, wrong results are returned.',
@@ -29,12 +33,14 @@ export const ticketsData = [
     title: 'Ticket Assignment Not Working',
     description: 'Auto-assignment rules are not triggering for new support tickets.',
     clientPriority: 2, clientSeverity: 3, internalPriority: 2, internalSeverity: 3,
-    reporterId: 6, assignedTo: 2, createdBy: 6 },
+    reporterId: 6, assignedTo: 2, createdBy: 6,
+    labels: ['resolved_internally'] },
   { id: 'demo_acme_005', issueKey: 'CRMSV-B-001', productId: 7, clientId: 1, type: 'bug', status: 'blocked',
     title: 'Email Notifications Delayed',
     description: 'Email notifications are delayed by 2-3 hours. Customers not receiving timely updates.',
     clientPriority: 1, clientSeverity: 1, internalPriority: 1, internalSeverity: 1,
-    reporterId: 10, assignedTo: 3, createdBy: 10 },
+    reporterId: 10, assignedTo: 3, createdBy: 10,
+    labels: ['escalated', 'internal_assignment'] },
 
   // TECHCORP - HRM
   { id: 'demo_tech_001', issueKey: 'HRM-S-003', productId: 11, clientId: 2, type: 'support', status: 'open',
@@ -58,7 +64,8 @@ export const ticketsData = [
     title: 'Invoice Print Layout Issue',
     description: 'Company logo not appearing correctly on printed invoices.',
     clientPriority: 4, clientSeverity: 3, internalPriority: 4, internalSeverity: 3,
-    reporterId: 11, assignedTo: 2, createdBy: 11 },
+    reporterId: 11, assignedTo: 2, createdBy: 11,
+    labels: ['auto_closed_no_response'] },
   { id: 'demo_tech_005', issueKey: 'FIN-R-001', productId: 12, clientId: 2, type: 'feature_request', status: 'open',
     title: 'Multi-Currency Support',
     description: 'Request to add support for multiple currencies in invoicing module.',
@@ -70,7 +77,8 @@ export const ticketsData = [
     title: 'Q1 2025 Performance Optimization',
     description: 'Improve system performance across all modules by 40%.',
     clientPriority: 2, clientSeverity: 2, internalPriority: 1, internalSeverity: 1,
-    reporterId: 1, assignedTo: 1, createdBy: 1 },
+    reporterId: 1, assignedTo: 1, createdBy: 1,
+    labels: ['created_by_systech'] },
   { id: 'demo_sys_002', issueKey: 'TSKLTS-T-001', productId: 14, clientId: 5, type: 'task', status: 'in_progress',
     title: 'Implement Redis Caching',
     description: 'Add Redis caching layer for frequently accessed data.',
@@ -102,7 +110,8 @@ export const ticketsData = [
     title: 'Route Optimization Failing',
     description: 'Issue was due to incorrect GPS coordinates - user error.',
     clientPriority: 2, clientSeverity: 2, internalPriority: 3, internalSeverity: 3,
-    reporterId: 12, assignedTo: 4, createdBy: 12 },
+    reporterId: 12, assignedTo: 4, createdBy: 12,
+    labels: ['reassigned_to_internal'] },
   { id: 'demo_mix_003', issueKey: 'SDMS-F-001', productId: 8, clientId: 5, type: 'feature', status: 'in_progress',
     title: 'Document Version Comparison',
     description: 'Add side-by-side comparison view for document versions.',
@@ -194,6 +203,7 @@ export async function seedTickets(tenantId: number) {
       reporterId: t.reporterId,
       assignedTo: t.assignedTo,
       createdBy: t.createdBy,
+      labels: (t as any).labels,
       createdAt,
       updatedAt,
     }).onConflictDoNothing()

@@ -134,8 +134,8 @@ export const tickets = pgTable('tickets', {
   }).default('support').notNull(),
 
   status: text('status', {
-    enum: ['open', 'in_progress', 'review', 'blocked', 'resolved', 'closed', 'cancelled']
-  }).default('open'),
+    enum: ['pending_internal_review', 'open', 'in_progress', 'waiting_for_customer', 'rebuttal', 'resolved', 'closed', 'cancelled']
+  }).default('pending_internal_review'),
 
   // Priority & Severity (client-facing and internal)
   clientPriority: integer('client_priority').default(3),
@@ -161,6 +161,15 @@ export const tickets = pgTable('tickets', {
   // External links
   sourceIdeaId: integer('source_idea_id'), // Link to ideas.id
   largeFileLink: text('large_file_link'), // Dropbox/OneDrive/Google Drive link
+
+  // Internal Triage & Escalation
+  internalAssignedTo: integer('internal_assigned_to').references(() => users.id), // Company employee assigned for internal clarification
+  escalationReason: text('escalation_reason', {
+    enum: ['executive_request', 'production_down', 'compliance', 'customer_impact', 'other']
+  }), // Required when escalating
+  escalationNote: text('escalation_note'), // Additional context for escalation
+  pushedToSystechAt: timestamp('pushed_to_systech_at'), // When ticket was pushed to Systech (SLA start)
+  pushedToSystechBy: integer('pushed_to_systech_by').references(() => users.id), // Who pushed it
 
   // Dynamic fields
   metadata: jsonb('metadata'), // { customFields, stepsToReproduce, acceptanceCriteria, ... }
@@ -211,6 +220,17 @@ export const ticketComments = pgTable('ticket_comments', {
   userId: integer('user_id').references(() => users.id),
   content: text('content').notNull(),
   isInternal: boolean('is_internal').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
+// Ticket Watchers (for notifications - users or external emails)
+export const ticketWatchers = pgTable('ticket_watchers', {
+  id: serial('id').primaryKey(),
+  tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
+  ticketId: text('ticket_id').references(() => tickets.id).notNull(), // nanoUUID reference
+  userId: integer('user_id').references(() => users.id), // NULL if external email
+  email: text('email'), // For non-users (external email watchers)
+  addedBy: integer('added_by').references(() => users.id).notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 })
 
@@ -669,6 +689,12 @@ export const ticketsRelations = relations(tickets, ({ one, many }) => ({
   // Attachments & comments
   attachments: many(attachments),
   comments: many(ticketComments),
+  watchers: many(ticketWatchers),
+  // Internal assignment (for company internal triage)
+  internalAssignee: one(users, {
+    fields: [tickets.internalAssignedTo],
+    references: [users.id],
+  }),
 }))
 
 export const ticketLinksRelations = relations(ticketLinks, ({ one }) => ({
@@ -956,6 +982,25 @@ export const ticketCommentsRelations = relations(ticketComments, ({ one }) => ({
   }),
   user: one(users, {
     fields: [ticketComments.userId],
+    references: [users.id],
+  }),
+}))
+
+export const ticketWatchersRelations = relations(ticketWatchers, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [ticketWatchers.tenantId],
+    references: [tenants.id],
+  }),
+  ticket: one(tickets, {
+    fields: [ticketWatchers.ticketId],
+    references: [tickets.id],
+  }),
+  user: one(users, {
+    fields: [ticketWatchers.userId],
+    references: [users.id],
+  }),
+  addedByUser: one(users, {
+    fields: [ticketWatchers.addedBy],
     references: [users.id],
   }),
 }))

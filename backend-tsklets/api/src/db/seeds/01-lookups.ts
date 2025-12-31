@@ -5,6 +5,32 @@
  * This seeds essential lookup data required for the system to function.
  */
 
+/**
+ * =============================================================================
+ * INTERNAL TRIAGE SYSTEM - STANDARD TICKET LABELS
+ * =============================================================================
+ *
+ * Labels are stored as text arrays on tickets (not a lookup table).
+ * The following are the standard labels used by the internal triage system:
+ *
+ * WORKFLOW LABELS:
+ * - escalated              : Urgent, needs immediate attention from senior staff
+ * - resolved_internally    : Closed without Systech involvement (client resolved)
+ * - auto_closed_no_response: Cron job closed after 5 days of resolved/waiting_for_customer
+ * - internal_assignment    : Assigned to employee for clarification before escalating
+ * - created_by_systech     : Systech created ticket on behalf of client
+ * - reassigned_to_internal : Systech sent back to client for internal handling
+ *
+ * These labels help track the lifecycle and routing of tickets in the triage
+ * workflow. They are applied automatically by system processes or manually
+ * by internal staff during ticket management.
+ *
+ * Usage in code:
+ *   ticket.labels = ['escalated', 'created_by_systech']
+ *
+ * =============================================================================
+ */
+
 import { db } from '../index.js'
 import { products, productSequences } from '../schema.js'
 

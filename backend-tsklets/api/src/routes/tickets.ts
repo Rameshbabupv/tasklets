@@ -1,8 +1,8 @@
 import { Router } from 'express'
 import { db } from '../db/index.js'
-import { tickets, attachments, ticketComments, ticketLinks, clients, users, products } from '../db/schema.js'
+import { tickets, attachments, ticketComments, ticketLinks, clients, users, products, ticketWatchers } from '../db/schema.js'
 import { eq, and, desc, or } from 'drizzle-orm'
-import { authenticate, requireInternal } from '../middleware/auth.js'
+import { authenticate, requireInternal, requireClientAdmin } from '../middleware/auth.js'
 import { upload } from '../middleware/upload.js'
 import { generateIssueKey } from '../utils/issueKey.js'
 
@@ -662,6 +662,529 @@ ticketRoutes.delete('/:id/links/:linkId', requireInternal, async (req, res) => {
     res.json({ success: true })
   } catch (error) {
     console.error('Delete ticket link error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ========================================
+// CLIENT INTERNAL TRIAGE ENDPOINTS
+// ========================================
+
+// Push ticket to Systech (company_admin only)
+// Changes status from 'pending_internal_review' to 'open' and starts SLA
+ticketRoutes.post('/:id/push-to-systech', requireClientAdmin, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { userId, tenantId, clientId } = req.user!
+
+    // Find ticket by id or issueKey
+    const [ticket] = await db.select().from(tickets)
+      .where(and(
+        or(eq(tickets.id, id), eq(tickets.issueKey, id)),
+        eq(tickets.tenantId, tenantId)
+      ))
+      .limit(1)
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' })
+    }
+
+    // Verify ticket belongs to the user's client
+    if (ticket.clientId !== clientId) {
+      return res.status(403).json({ error: 'Forbidden: Can only push tickets from your own company' })
+    }
+
+    // Verify ticket is in pending_internal_review status
+    if (ticket.status !== 'pending_internal_review') {
+      return res.status(400).json({ error: 'Ticket must be in pending_internal_review status to push to Systech' })
+    }
+
+    // Update ticket
+    const [updated] = await db.update(tickets)
+      .set({
+        status: 'open',
+        pushedToSystechAt: new Date(),
+        pushedToSystechBy: userId,
+        updatedAt: new Date(),
+      })
+      .where(eq(tickets.id, ticket.id))
+      .returning()
+
+    res.json({ ticket: updated })
+  } catch (error) {
+    console.error('Push to Systech error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Escalate ticket to Systech (company_admin only)
+// Changes status to 'open', adds 'escalated' label, and starts SLA
+ticketRoutes.post('/:id/escalate', requireClientAdmin, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { escalationReason, escalationNote } = req.body
+    const { userId, tenantId, clientId } = req.user!
+
+    // Validate escalation reason
+    const validReasons = ['executive_request', 'production_down', 'compliance', 'customer_impact', 'other']
+    if (!escalationReason || !validReasons.includes(escalationReason)) {
+      return res.status(400).json({
+        error: `escalationReason is required. Valid values: ${validReasons.join(', ')}`
+      })
+    }
+
+    // If reason is 'other', escalationNote is required
+    if (escalationReason === 'other' && !escalationNote) {
+      return res.status(400).json({ error: 'escalationNote is required when escalationReason is "other"' })
+    }
+
+    // Find ticket by id or issueKey
+    const [ticket] = await db.select().from(tickets)
+      .where(and(
+        or(eq(tickets.id, id), eq(tickets.issueKey, id)),
+        eq(tickets.tenantId, tenantId)
+      ))
+      .limit(1)
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' })
+    }
+
+    // Verify ticket belongs to the user's client
+    if (ticket.clientId !== clientId) {
+      return res.status(403).json({ error: 'Forbidden: Can only escalate tickets from your own company' })
+    }
+
+    // Add 'escalated' label to existing labels
+    const currentLabels = ticket.labels || []
+    const newLabels = currentLabels.includes('escalated')
+      ? currentLabels
+      : [...currentLabels, 'escalated']
+
+    // Update ticket
+    const [updated] = await db.update(tickets)
+      .set({
+        status: 'open',
+        escalationReason: escalationReason as any,
+        escalationNote: escalationNote || null,
+        labels: newLabels,
+        pushedToSystechAt: new Date(),
+        pushedToSystechBy: userId,
+        updatedAt: new Date(),
+      })
+      .where(eq(tickets.id, ticket.id))
+      .returning()
+
+    res.json({ ticket: updated })
+  } catch (error) {
+    console.error('Escalate ticket error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Assign ticket to internal company employee for clarification (company_admin only)
+ticketRoutes.post('/:id/assign-internal', requireClientAdmin, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { internalAssignedTo } = req.body
+    const { tenantId, clientId } = req.user!
+
+    if (!internalAssignedTo) {
+      return res.status(400).json({ error: 'internalAssignedTo (userId) is required' })
+    }
+
+    // Find ticket by id or issueKey
+    const [ticket] = await db.select().from(tickets)
+      .where(and(
+        or(eq(tickets.id, id), eq(tickets.issueKey, id)),
+        eq(tickets.tenantId, tenantId)
+      ))
+      .limit(1)
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' })
+    }
+
+    // Verify ticket belongs to the user's client
+    if (ticket.clientId !== clientId) {
+      return res.status(403).json({ error: 'Forbidden: Can only assign tickets from your own company' })
+    }
+
+    // Verify the assignee exists and belongs to the same client
+    const [assignee] = await db.select().from(users)
+      .where(and(
+        eq(users.id, internalAssignedTo),
+        eq(users.tenantId, tenantId),
+        eq(users.clientId, clientId!)
+      ))
+      .limit(1)
+
+    if (!assignee) {
+      return res.status(400).json({ error: 'Assignee not found or does not belong to your company' })
+    }
+
+    // Add 'internal_assignment' label to existing labels
+    const currentLabels = ticket.labels || []
+    const newLabels = currentLabels.includes('internal_assignment')
+      ? currentLabels
+      : [...currentLabels, 'internal_assignment']
+
+    // Update ticket
+    const [updated] = await db.update(tickets)
+      .set({
+        internalAssignedTo,
+        labels: newLabels,
+        updatedAt: new Date(),
+      })
+      .where(eq(tickets.id, ticket.id))
+      .returning()
+
+    res.json({ ticket: updated })
+  } catch (error) {
+    console.error('Assign internal error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Reassign ticket back to client's internal team (Systech internal users only)
+// Changes status to 'pending_internal_review', clears SLA, adds label
+ticketRoutes.post('/:id/reassign-to-internal', requireInternal, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { comment } = req.body
+    const { userId, tenantId } = req.user!
+
+    // Comment is required to explain why the ticket is being reassigned
+    if (!comment || comment.trim().length === 0) {
+      return res.status(400).json({ error: 'A comment explaining the reassignment reason is required' })
+    }
+
+    // Find ticket by id or issueKey
+    const [ticket] = await db.select().from(tickets)
+      .where(and(
+        or(eq(tickets.id, id), eq(tickets.issueKey, id)),
+        eq(tickets.tenantId, tenantId)
+      ))
+      .limit(1)
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' })
+    }
+
+    // Ticket must have a client (cannot reassign internal-only tickets)
+    if (!ticket.clientId) {
+      return res.status(400).json({ error: 'Cannot reassign internal-only tickets' })
+    }
+
+    // Add 'reassigned_to_internal' label to existing labels
+    const currentLabels = ticket.labels || []
+    const newLabels = currentLabels.includes('reassigned_to_internal')
+      ? currentLabels
+      : [...currentLabels, 'reassigned_to_internal']
+
+    // Update ticket: change status, clear SLA timestamp, add label
+    const [updated] = await db.update(tickets)
+      .set({
+        status: 'pending_internal_review',
+        pushedToSystechAt: null,
+        labels: newLabels,
+        updatedAt: new Date(),
+      })
+      .where(eq(tickets.id, ticket.id))
+      .returning()
+
+    // Add the comment explaining why the ticket was reassigned
+    await db.insert(ticketComments).values({
+      tenantId,
+      ticketId: ticket.id,
+      userId,
+      content: comment,
+      isInternal: false, // Visible to client
+    })
+
+    res.json({ ticket: updated })
+  } catch (error) {
+    console.error('Reassign to internal error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ========================================
+// TICKET WATCHERS
+// ========================================
+
+// Get watchers for a ticket
+ticketRoutes.get('/:id/watchers', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { tenantId, clientId, isInternal, userId, role } = req.user!
+
+    // Find ticket by id or issueKey
+    const [ticket] = await db.select().from(tickets)
+      .where(and(
+        or(eq(tickets.id, id), eq(tickets.issueKey, id)),
+        eq(tickets.tenantId, tenantId)
+      ))
+      .limit(1)
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' })
+    }
+
+    // Access check
+    if (!isInternal) {
+      if (role === 'company_admin') {
+        if (ticket.clientId !== clientId) {
+          return res.status(403).json({ error: 'Forbidden' })
+        }
+      } else {
+        if (ticket.createdBy !== userId) {
+          return res.status(403).json({ error: 'Forbidden' })
+        }
+      }
+    }
+
+    // Get watchers
+    const watchers = await db.select({
+      id: ticketWatchers.id,
+      userId: ticketWatchers.userId,
+      email: ticketWatchers.email,
+      addedBy: ticketWatchers.addedBy,
+      createdAt: ticketWatchers.createdAt,
+    }).from(ticketWatchers)
+      .where(eq(ticketWatchers.ticketId, ticket.id))
+
+    // Get user info for user watchers
+    const watcherUserIds = watchers.filter(w => w.userId !== null).map(w => w.userId!)
+    let userInfos: Record<number, { id: number; name: string; email: string }> = {}
+    if (watcherUserIds.length > 0) {
+      const usersData = await db.select({ id: users.id, name: users.name, email: users.email })
+        .from(users)
+        .where(or(...watcherUserIds.map(uid => eq(users.id, uid))))
+      usersData.forEach(u => { userInfos[u.id] = u })
+    }
+
+    // Format watchers with user info
+    const formattedWatchers = watchers.map(w => ({
+      id: w.id,
+      userId: w.userId,
+      email: w.userId ? userInfos[w.userId]?.email || w.email : w.email,
+      userName: w.userId ? userInfos[w.userId]?.name || null : null,
+      addedBy: w.addedBy,
+      createdAt: w.createdAt,
+    }))
+
+    res.json({ watchers: formattedWatchers })
+  } catch (error) {
+    console.error('Get ticket watchers error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Add watcher to a ticket
+ticketRoutes.post('/:id/watchers', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { userId: watcherUserId, email: watcherEmail } = req.body
+    const { userId, tenantId, clientId, isInternal, role } = req.user!
+
+    // Validate: either userId or email must be provided, not both
+    if (!watcherUserId && !watcherEmail) {
+      return res.status(400).json({ error: 'Either userId or email must be provided' })
+    }
+    if (watcherUserId && watcherEmail) {
+      return res.status(400).json({ error: 'Cannot provide both userId and email' })
+    }
+
+    // Find ticket by id or issueKey
+    const [ticket] = await db.select().from(tickets)
+      .where(and(
+        or(eq(tickets.id, id), eq(tickets.issueKey, id)),
+        eq(tickets.tenantId, tenantId)
+      ))
+      .limit(1)
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' })
+    }
+
+    // Access check for viewing the ticket
+    if (!isInternal) {
+      if (role === 'company_admin') {
+        if (ticket.clientId !== clientId) {
+          return res.status(403).json({ error: 'Forbidden' })
+        }
+      } else {
+        if (ticket.createdBy !== userId) {
+          return res.status(403).json({ error: 'Forbidden' })
+        }
+      }
+    }
+
+    // Permission check for adding watchers
+    if (watcherUserId) {
+      // Adding a user watcher
+      const isSelf = watcherUserId === userId
+
+      if (isSelf) {
+        // Any user can add themselves as a watcher
+        // (internal users and client users who have access to the ticket)
+      } else {
+        // Adding someone else - need to be company_admin or internal
+        if (!isInternal && role !== 'company_admin') {
+          return res.status(403).json({ error: 'Only company admins can add other users as watchers' })
+        }
+
+        // Validate the user exists and belongs to the same company/tenant
+        const [targetUser] = await db.select().from(users)
+          .where(and(
+            eq(users.id, watcherUserId),
+            eq(users.tenantId, tenantId)
+          ))
+          .limit(1)
+
+        if (!targetUser) {
+          return res.status(404).json({ error: 'User not found' })
+        }
+
+        // For company_admin, ensure the target user belongs to their company
+        if (!isInternal && role === 'company_admin') {
+          if (targetUser.clientId !== clientId) {
+            return res.status(403).json({ error: 'Cannot add users from other companies' })
+          }
+        }
+      }
+    } else {
+      // Adding an external email watcher - only company_admin or internal can do this
+      if (!isInternal && role !== 'company_admin') {
+        return res.status(403).json({ error: 'Only company admins can add external email watchers' })
+      }
+    }
+
+    // Check if watcher already exists
+    let existingWatcher
+    if (watcherUserId) {
+      [existingWatcher] = await db.select().from(ticketWatchers)
+        .where(and(
+          eq(ticketWatchers.ticketId, ticket.id),
+          eq(ticketWatchers.userId, watcherUserId)
+        ))
+        .limit(1)
+    } else {
+      [existingWatcher] = await db.select().from(ticketWatchers)
+        .where(and(
+          eq(ticketWatchers.ticketId, ticket.id),
+          eq(ticketWatchers.email, watcherEmail)
+        ))
+        .limit(1)
+    }
+
+    if (existingWatcher) {
+      return res.status(400).json({ error: 'This watcher already exists for this ticket' })
+    }
+
+    // Create the watcher
+    const [watcher] = await db.insert(ticketWatchers).values({
+      tenantId,
+      ticketId: ticket.id,
+      userId: watcherUserId || null,
+      email: watcherEmail || null,
+      addedBy: userId,
+    }).returning()
+
+    // Get user info if this is a user watcher
+    let watcherUserInfo = null
+    if (watcher.userId) {
+      const [userInfo] = await db.select({ id: users.id, name: users.name, email: users.email })
+        .from(users)
+        .where(eq(users.id, watcher.userId))
+        .limit(1)
+      watcherUserInfo = userInfo
+    }
+
+    res.status(201).json({
+      watcher: {
+        id: watcher.id,
+        userId: watcher.userId,
+        email: watcherUserInfo?.email || watcher.email,
+        userName: watcherUserInfo?.name || null,
+        addedBy: watcher.addedBy,
+        createdAt: watcher.createdAt,
+      }
+    })
+  } catch (error) {
+    console.error('Add ticket watcher error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Remove watcher from a ticket
+ticketRoutes.delete('/:id/watchers/:watcherId', async (req, res) => {
+  try {
+    const { id, watcherId } = req.params
+    const { userId, tenantId, clientId, isInternal, role } = req.user!
+
+    // Find ticket by id or issueKey
+    const [ticket] = await db.select().from(tickets)
+      .where(and(
+        or(eq(tickets.id, id), eq(tickets.issueKey, id)),
+        eq(tickets.tenantId, tenantId)
+      ))
+      .limit(1)
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' })
+    }
+
+    // Find the watcher
+    const [watcher] = await db.select().from(ticketWatchers)
+      .where(and(
+        eq(ticketWatchers.id, parseInt(watcherId)),
+        eq(ticketWatchers.ticketId, ticket.id),
+        eq(ticketWatchers.tenantId, tenantId)
+      ))
+      .limit(1)
+
+    if (!watcher) {
+      return res.status(404).json({ error: 'Watcher not found' })
+    }
+
+    // Permission check for removing watchers
+    const isSelf = watcher.userId === userId
+
+    if (isSelf) {
+      // Users can always remove themselves
+    } else if (isInternal) {
+      // Internal users can remove any watcher
+    } else if (role === 'company_admin') {
+      // Company admin can remove watchers from their company
+      if (watcher.userId) {
+        // Check if the watcher user belongs to the admin's company
+        const [watcherUser] = await db.select().from(users)
+          .where(eq(users.id, watcher.userId))
+          .limit(1)
+
+        if (watcherUser && watcherUser.clientId !== clientId) {
+          return res.status(403).json({ error: 'Cannot remove watchers from other companies' })
+        }
+      }
+      // External email watchers can be removed by company_admin if they added them
+      // or if they're admin of the ticket's client
+      if (!watcher.userId && ticket.clientId !== clientId) {
+        return res.status(403).json({ error: 'Forbidden' })
+      }
+    } else {
+      // Regular users can only remove themselves
+      return res.status(403).json({ error: 'You can only remove yourself as a watcher' })
+    }
+
+    // Delete the watcher
+    await db.delete(ticketWatchers)
+      .where(eq(ticketWatchers.id, parseInt(watcherId)))
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Remove ticket watcher error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
