@@ -1,35 +1,38 @@
-import { useEffect, useState, useRef } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Toaster } from 'sonner'
 import { useAuthStore } from '../store/auth'
 import type { Ticket } from '@tsklets/types'
 import { StatusBadge, PriorityPill } from '@tsklets/ui'
 import { formatDate } from '@tsklets/utils'
-import StatCard from '../components/StatCard'
-import ModuleCard from '../components/ModuleCard'
 import NewTicketModal from '../components/NewTicketModal'
-import ChangePasswordModal from '../components/ChangePasswordModal'
 import TicketDetailModal from '../components/TicketDetailModal'
-import ThemeToggle from '../components/ThemeToggle'
+
+// Compact stat card component
+function StatCard({ icon, label, value, color }: { icon: string; label: string; value: number; color: string }) {
+  return (
+    <motion.div
+      whileHover={{ scale: 1.02, y: -2 }}
+      className={`flex items-center gap-3 p-4 rounded-xl border backdrop-blur-sm ${color}`}
+      style={{ borderColor: 'var(--border-primary)' }}
+    >
+      <div className="w-10 h-10 rounded-lg bg-white/50 dark:bg-black/20 flex items-center justify-center">
+        <span className="material-symbols-outlined text-xl">{icon}</span>
+      </div>
+      <div>
+        <span className="text-2xl font-bold">{value}</span>
+        <p className="text-xs font-medium opacity-80 uppercase tracking-wide">{label}</p>
+      </div>
+    </motion.div>
+  )
+}
 
 export default function Dashboard() {
-  const { user, token, logout } = useAuthStore()
+  const { user, token } = useAuthStore()
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
   const [showNewTicketModal, setShowNewTicketModal] = useState(false)
-  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false)
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null)
-  const passwordCheckDone = useRef(false)
-  const navigate = useNavigate()
-
-  // Check if user needs to change password - only on initial mount
-  useEffect(() => {
-    if (!passwordCheckDone.current && user?.requirePasswordChange) {
-      passwordCheckDone.current = true
-      setShowChangePasswordModal(true)
-    }
-  }, [user?.requirePasswordChange])
 
   useEffect(() => {
     fetchTickets()
@@ -49,11 +52,6 @@ export default function Dashboard() {
     }
   }
 
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
-  }
-
   const stats = {
     total: tickets.length,
     open: tickets.filter((t) => t.status === 'open').length,
@@ -62,348 +60,212 @@ export default function Dashboard() {
     pendingReview: tickets.filter((t) => t.status === 'pending_internal_review').length,
   }
 
+  const isCompanyAdmin = user?.role === 'company_admin'
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
-      {/* Header */}
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
+    <>
+      {/* Welcome Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="bg-gradient-to-r from-white to-purple-50/30 dark:from-slate-800 dark:to-purple-900/30 border-b border-slate-200 dark:border-slate-700"
+        className="mb-6"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 text-white shadow-lg">
-                <span className="material-symbols-outlined text-xl">support_agent</span>
-              </div>
-              <div>
-                <span className="font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Support Desk</span>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{user?.tenant?.name || 'Client Portal'}</p>
-              </div>
+        <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
+          Welcome back, {user?.name?.split(' ')[0]}
+        </h1>
+        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+          {stats.open > 0
+            ? `You have ${stats.open} open ticket${stats.open > 1 ? 's' : ''} requiring attention.`
+            : 'All caught up! No open tickets at the moment.'
+          }
+        </p>
+      </motion.div>
+
+      {/* Stats Grid */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"
+      >
+        <StatCard icon="folder_open" label="Open" value={stats.open} color="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400" />
+        <StatCard icon="pending" label="In Progress" value={stats.inProgress} color="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400" />
+        <StatCard icon="check_circle" label="Resolved" value={stats.resolved} color="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400" />
+        {isCompanyAdmin ? (
+          <StatCard icon="inbox" label="Triage" value={stats.pendingReview} color="bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400" />
+        ) : (
+          <StatCard icon="confirmation_number" label="Total" value={stats.total} color="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300" />
+        )}
+      </motion.div>
+
+      {/* Tickets Table */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="rounded-2xl border shadow-sm overflow-hidden"
+        style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}
+      >
+        <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-primary)' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white shadow-md">
+              <span className="material-symbols-outlined">receipt_long</span>
             </div>
-
-            <div className="flex items-center gap-2 sm:gap-4">
-              <motion.button
-                onClick={() => setShowNewTicketModal(true)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-purple-600 text-white min-h-[44px] min-w-[44px] px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-all shadow-md hover:shadow-lg"
-              >
-                <span className="material-symbols-outlined text-lg" aria-hidden="true">add</span>
-                <span className="hidden sm:inline">New Ticket</span>
-              </motion.button>
-              <ThemeToggle />
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="text-right hidden md:block">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{user?.name}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{user?.role}</p>
-                </div>
-                <motion.button
-                  onClick={handleLogout}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="text-slate-400 hover:text-primary transition-colors p-2 hover:bg-white rounded-lg"
-                  aria-label="Logout"
-                >
-                  <span className="material-symbols-outlined" aria-hidden="true">logout</span>
-                </motion.button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.header>
-
-      {/* Main */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-8"
-        >
-          <div className="flex items-center gap-3 mb-6">
-            <span className="text-3xl" aria-hidden="true">📊</span>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Dashboard</h1>
-          </div>
-        </motion.div>
-
-        {/* Quick Access */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="mb-8"
-        >
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Quick Access</h2>
-          <div className={`grid grid-cols-1 sm:grid-cols-2 ${user?.role === 'company_admin' ? 'lg:grid-cols-5' : 'lg:grid-cols-3'} gap-4 sm:gap-6`}>
-            <div onClick={() => setShowNewTicketModal(true)} className="cursor-pointer">
-              <ModuleCard
-                emoji="🎫"
-                title="Create Ticket"
-                description="Submit a new support request for our team to assist you"
-                to="#"
-                badge="Start Here"
-                badgeColor="bg-gradient-to-r from-primary to-purple-600 text-white"
-              />
-            </div>
-            <ModuleCard
-              emoji="📋"
-              title="My Tickets"
-              description="View and track all your support tickets in one place"
-              count={stats.total}
-              countLabel="Total"
-              to="/tickets"
-              badge={stats.open > 0 ? 'Active' : undefined}
-              badgeColor={stats.open > 5 ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}
-            />
-            {user?.role === 'company_admin' && (
-              <>
-                <ModuleCard
-                  emoji="📥"
-                  title="Internal Triage"
-                  description="Review and route incoming tickets before escalation"
-                  count={stats.pendingReview}
-                  countLabel="Pending"
-                  to="/triage"
-                  badge={stats.pendingReview > 0 ? 'Action Needed' : undefined}
-                  badgeColor="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
-                />
-                <ModuleCard
-                  emoji="👥"
-                  title="User Management"
-                  description="Create and manage users in your organization"
-                  to="/users"
-                  badge="Admin Only"
-                  badgeColor="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                />
-              </>
-            )}
-            <ModuleCard
-              emoji="📚"
-              title="Knowledge Base"
-              description="Browse helpful articles and common solutions"
-              to="/help"
-            />
-          </div>
-        </motion.div>
-
-        {/* Stats */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mb-8"
-        >
-          <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Ticket Overview</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard
-              icon="confirmation_number"
-              emoji="🎫"
-              label="Total Tickets"
-              value={stats.total}
-              color="bg-blue-50 text-blue-600"
-            />
-            <StatCard
-              icon="folder_open"
-              emoji="📂"
-              label="Open"
-              value={stats.open}
-              color="bg-amber-50 text-amber-600"
-            />
-            <StatCard
-              icon="pending"
-              emoji="⏳"
-              label="In Progress"
-              value={stats.inProgress}
-              color="bg-purple-50 text-purple-600"
-            />
-            <StatCard
-              icon="check_circle"
-              emoji="✅"
-              label="Resolved"
-              value={stats.resolved}
-              color="bg-green-50 text-green-600"
-            />
-          </div>
-        </motion.div>
-
-        {/* Tickets Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="rounded-xl border shadow-lg hover:shadow-xl transition-shadow"
-          style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}
-        >
-          <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-primary)' }}>
-            <div className="flex items-center gap-2">
-              <span className="text-xl" aria-hidden="true">📋</span>
+            <div>
               <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>Recent Tickets</h2>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{stats.total} total tickets</p>
             </div>
-            <Link to="/tickets" className="text-sm text-primary hover:text-purple-600 flex items-center gap-1 font-semibold group">
-              View all
-              <span className="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform" aria-hidden="true">arrow_forward</span>
-            </Link>
           </div>
+          <Link
+            to="/tickets"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+          >
+            View all
+            <span className="material-symbols-outlined text-lg">arrow_forward</span>
+          </Link>
+        </div>
 
-          {loading ? (
-            <div className="p-12 flex flex-col items-center justify-center">
-              <div className="inline-block size-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-              <p style={{ color: 'var(--text-secondary)' }}>Loading tickets...</p>
+        {loading ? (
+          <div className="p-12 flex flex-col items-center justify-center">
+            <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading tickets...</p>
+          </div>
+        ) : tickets.length === 0 ? (
+          <div className="p-12 text-center">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex items-center justify-center">
+              <span className="material-symbols-outlined text-4xl text-blue-600 dark:text-blue-400">confirmation_number</span>
             </div>
-          ) : tickets.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="text-6xl mb-4">🎫</div>
-              <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--text-primary)' }}>No tickets yet</h3>
-              <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>Get started by creating your first support ticket</p>
-              <motion.button
-                onClick={() => setShowNewTicketModal(true)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-all shadow-md hover:shadow-lg"
-              >
-                <span className="material-symbols-outlined" aria-hidden="true">add</span>
-                Create your first ticket
-              </motion.button>
-            </div>
-          ) : (
-            <>
-              {/* Desktop Table View */}
-              <table className="w-full hidden md:table">
-                <thead className="bg-slate-100 dark:bg-slate-700">
-                  <tr className="text-left text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-200">
-                    <th className="px-4 py-4">Key</th>
-                    <th className="px-4 py-4">Subject</th>
-                    <th className="px-4 py-4">Type</th>
-                    <th className="px-4 py-4">Status</th>
-                    <th className="px-4 py-4">Priority</th>
-                    <th className="px-4 py-4">Created By</th>
-                    <th className="px-4 py-4">Created</th>
-                    <th className="px-4 py-4">Updated</th>
+            <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--text-primary)' }}>No tickets yet</h3>
+            <p className="text-sm mb-6 max-w-sm mx-auto" style={{ color: 'var(--text-secondary)' }}>
+              Get started by creating your first support ticket. Our team is ready to help!
+            </p>
+            <motion.button
+              onClick={() => setShowNewTicketModal(true)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow"
+            >
+              <span className="material-symbols-outlined">add</span>
+              Create your first ticket
+            </motion.button>
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b text-left text-xs font-semibold uppercase tracking-wider" style={{ borderColor: 'var(--border-primary)', color: 'var(--text-muted)' }}>
+                    <th className="px-5 py-3">Ticket</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3">Priority</th>
+                    <th className="px-5 py-3">Created</th>
+                    <th className="px-5 py-3">Updated</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y" style={{ borderColor: 'var(--border-primary)' }}>
-                  {tickets.slice(0, 5).map((ticket, index) => (
+                  {tickets.slice(0, 8).map((ticket, index) => (
                     <motion.tr
                       key={ticket.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.5 + index * 0.05 }}
-                      className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/50 dark:hover:from-purple-900/20 dark:hover:to-blue-900/20 transition-colors"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.3 + index * 0.03 }}
+                      onClick={() => setSelectedTicketId(ticket.id)}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors group"
                     >
-                      <td className="px-4 py-4">
-                        <button
-                          onClick={() => setSelectedTicketId(ticket.id)}
-                          className="text-sm font-semibold text-primary hover:text-purple-600 transition-colors"
-                        >
-                          {ticket.issueKey}
-                        </button>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-2 h-2 rounded-full shrink-0 ${
+                            ticket.status === 'open' ? 'bg-amber-500' :
+                            ticket.status === 'in_progress' ? 'bg-blue-500' :
+                            ticket.status === 'resolved' ? 'bg-emerald-500' :
+                            ticket.status === 'pending_internal_review' ? 'bg-orange-500' :
+                            'bg-slate-400'
+                          }`} />
+                          <div>
+                            <p className="font-semibold text-sm group-hover:text-blue-600 transition-colors" style={{ color: 'var(--text-primary)' }}>
+                              {ticket.title}
+                            </p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-xs font-mono text-blue-600 dark:text-blue-400">{ticket.issueKey}</span>
+                              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>•</span>
+                              <span className="text-xs capitalize" style={{ color: 'var(--text-muted)' }}>
+                                {ticket.type?.replace('_', ' ')}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
                       </td>
-                      <td className="px-4 py-4">
-                        <button
-                          onClick={() => setSelectedTicketId(ticket.id)}
-                          className="text-sm font-semibold hover:text-primary transition-colors text-left"
-                          style={{ color: 'var(--text-primary)' }}
-                        >
-                          {ticket.title}
-                        </button>
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-                          ticket.type === 'feature_request'
-                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
-                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                        }`}>
-                          {ticket.type === 'feature_request' ? '✨ Feature' : '🎫 Support'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
+                      <td className="px-5 py-4">
                         <StatusBadge status={ticket.status} />
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-5 py-4">
                         <PriorityPill priority={ticket.clientPriority} />
                       </td>
-                      <td className="px-4 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        {ticket.createdByName || 'Unknown'}
+                      <td className="px-5 py-4">
+                        <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                          {formatDate(ticket.createdAt)}
+                        </span>
                       </td>
-                      <td className="px-4 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        {formatDate(ticket.createdAt)}
-                      </td>
-                      <td className="px-4 py-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        {formatDate(ticket.updatedAt)}
+                      <td className="px-5 py-4">
+                        <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                          {formatDate(ticket.updatedAt)}
+                        </span>
                       </td>
                     </motion.tr>
                   ))}
                 </tbody>
               </table>
+            </div>
 
-              {/* Mobile Card View */}
-              <div className="md:hidden divide-y" style={{ borderColor: 'var(--border-primary)' }}>
-                {tickets.slice(0, 5).map((ticket, index) => (
-                  <motion.div
-                    key={ticket.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 + index * 0.05 }}
-                  >
-                    <button
-                      onClick={() => setSelectedTicketId(ticket.id)}
-                      className="block w-full text-left p-4 active:bg-slate-50 dark:active:bg-slate-800 transition-colors min-h-[44px]"
-                    >
-                      <div className="flex items-start justify-between gap-3 mb-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                              ticket.type === 'feature_request'
-                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
-                                : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                            }`}>
-                              {ticket.type === 'feature_request' ? '✨' : '🎫'}
-                            </span>
-                            <p className="text-xs font-mono text-primary">
-                              {ticket.issueKey}
-                            </p>
-                          </div>
-                          <h3 className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
-                            {ticket.title}
-                          </h3>
-                        </div>
-                        <StatusBadge status={ticket.status} />
+            {/* Mobile List */}
+            <div className="md:hidden divide-y" style={{ borderColor: 'var(--border-primary)' }}>
+              {tickets.slice(0, 8).map((ticket, index) => (
+                <motion.div
+                  key={ticket.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 + index * 0.03 }}
+                  onClick={() => setSelectedTicketId(ticket.id)}
+                  className="p-4 active:bg-slate-50 dark:active:bg-slate-800 cursor-pointer"
+                >
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${
+                          ticket.status === 'open' ? 'bg-amber-500' :
+                          ticket.status === 'in_progress' ? 'bg-blue-500' :
+                          ticket.status === 'resolved' ? 'bg-emerald-500' :
+                          ticket.status === 'pending_internal_review' ? 'bg-orange-500' :
+                          'bg-slate-400'
+                        }`} />
+                        <span className="text-xs font-mono text-blue-600 dark:text-blue-400">{ticket.issueKey}</span>
                       </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <PriorityPill priority={ticket.clientPriority} />
-                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                          {formatDate(ticket.createdAt)}
-                        </span>
-                      </div>
-                    </button>
-                  </motion.div>
-                ))}
-              </div>
-            </>
-          )}
-        </motion.div>
-      </main>
+                      <h3 className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+                        {ticket.title}
+                      </h3>
+                    </div>
+                    <StatusBadge status={ticket.status} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <PriorityPill priority={ticket.clientPriority} />
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      {formatDate(ticket.createdAt)}
+                    </span>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </>
+        )}
+      </motion.div>
 
-      {/* Change Password Modal (Required) */}
-      <ChangePasswordModal
-        isOpen={showChangePasswordModal}
-        canDismiss={false}
-        onSuccess={() => setShowChangePasswordModal(false)}
-      />
-
-      {/* New Ticket Modal */}
+      {/* Modals */}
       <NewTicketModal isOpen={showNewTicketModal} onClose={() => setShowNewTicketModal(false)} />
-
-      {/* Ticket Detail Modal */}
       <TicketDetailModal
         ticketId={selectedTicketId}
         onClose={() => setSelectedTicketId(null)}
       />
-
-      {/* Toast Notifications */}
-      <Toaster position="top-right" richColors />
-    </div>
+    </>
   )
 }

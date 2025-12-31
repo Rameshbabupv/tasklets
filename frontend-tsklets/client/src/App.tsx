@@ -10,6 +10,7 @@ import TicketDetail from './pages/TicketDetail'
 import UserManagement from './pages/UserManagement'
 import KnowledgeBase from './pages/KnowledgeBase'
 import InternalTriageQueue from './pages/InternalTriageQueue'
+import AppLayout from './components/AppLayout'
 import DevUserSwitcher from './components/DevUserSwitcher'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -30,62 +31,22 @@ export default function App() {
     <>
       <Routes>
         <Route path="/login" element={<Login />} />
+        {/* Protected routes with shared AppLayout */}
         <Route
-          path="/"
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <AppLayout />
             </ProtectedRoute>
           }
-        />
-        <Route
-          path="/tickets"
-          element={
-            <ProtectedRoute>
-              <MyTickets />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/tickets/new"
-          element={
-            <ProtectedRoute>
-              <NewTicket />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/tickets/:id"
-          element={
-            <ProtectedRoute>
-              <TicketDetail />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/users"
-          element={
-            <ProtectedRoute>
-              <UserManagement />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/help"
-          element={
-            <ProtectedRoute>
-              <KnowledgeBase />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/triage"
-          element={
-            <ProtectedRoute>
-              <InternalTriageQueue />
-            </ProtectedRoute>
-          }
-        />
+        >
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/tickets" element={<MyTickets />} />
+          <Route path="/tickets/new" element={<NewTicket />} />
+          <Route path="/tickets/:id" element={<TicketDetail />} />
+          <Route path="/users" element={<UserManagement />} />
+          <Route path="/help" element={<KnowledgeBase />} />
+          <Route path="/triage" element={<InternalTriageQueue />} />
+        </Route>
       </Routes>
       <DevUserSwitcher />
     </>
