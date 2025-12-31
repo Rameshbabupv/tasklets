@@ -20,6 +20,7 @@ import ExecutiveDashboard from './pages/ExecutiveDashboard'
 import Roadmap from './pages/Roadmap'
 import Requirements from './pages/Requirements'
 import RequirementDetail from './pages/RequirementDetail'
+import DevTasks from './pages/DevTasks'
 import DevUserSwitcher from './components/DevUserSwitcher'
 import CreateHub from './components/CreateHub'
 import CreateFAB from './components/CreateFAB'
@@ -76,6 +77,7 @@ export default function App() {
         <Route path="/sprints/:id" element={<PrivateRoute><SprintBoard /></PrivateRoute>} />
         <Route path="/sprints/:id/retro" element={<PrivateRoute><SprintRetro /></PrivateRoute>} />
         <Route path="/backlog" element={<PrivateRoute><Backlog /></PrivateRoute>} />
+        <Route path="/dev-tasks" element={<PrivateRoute><DevTasks /></PrivateRoute>} />
         <Route path="/ideas" element={<PrivateRoute><Ideas /></PrivateRoute>} />
         <Route path="/ideas/:id" element={<PrivateRoute><IdeaDetail /></PrivateRoute>} />
         <Route path="/requirements" element={<PrivateRoute><Requirements /></PrivateRoute>} />

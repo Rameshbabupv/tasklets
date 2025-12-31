@@ -1,28 +1,77 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/auth'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import ThemeToggle from './ThemeToggle'
 
-const navItems = [
-  { path: '/dashboard', emoji: '📊', icon: 'dashboard', label: 'Dashboard', roles: ['admin', 'support', 'integrator', 'ceo', 'developer'] },
-  { path: '/executive', emoji: '🎯', icon: 'monitoring', label: 'Executive', roles: ['ceo', 'admin'] },
-  { path: '/roadmap', emoji: '🗺️', icon: 'map', label: 'Roadmap', roles: ['ceo', 'admin'] },
-  { path: '/requirements', emoji: '📝', icon: 'description', label: 'Requirements', roles: ['admin', 'ceo', 'support'] },
-  { path: '/my-tasks', emoji: '✅', icon: 'task_alt', label: 'My Tasks', roles: ['developer'] },
-  { path: '/sprints', emoji: '🏃', icon: 'sprint', label: 'Sprints', roles: ['admin', 'ceo', 'developer'] },
-  { path: '/backlog', emoji: '📋', icon: 'list', label: 'Backlog', roles: ['admin', 'ceo', 'developer'] },
-  { path: '/tickets', emoji: '🎫', icon: 'confirmation_number', label: 'Tickets', roles: ['admin', 'support', 'integrator', 'ceo'] },
-  { path: '/ideas', emoji: '💡', icon: 'lightbulb', label: 'Ideas', roles: ['admin', 'support', 'integrator', 'ceo', 'developer'] },
-  { path: '/clients', emoji: '🏢', icon: 'group', label: 'Clients', roles: ['admin', 'support', 'integrator', 'ceo'] },
-  { path: '/products', emoji: '📦', icon: 'inventory_2', label: 'Products', roles: ['admin', 'support', 'integrator', 'ceo'] },
+// Navigation structure with sections
+interface NavItem {
+  path: string
+  emoji: string
+  icon: string
+  label: string
+  roles: string[]
+}
+
+interface NavSection {
+  id: string
+  title?: string // undefined = no header
+  items: NavItem[]
+  collapsible?: boolean
+  defaultCollapsed?: boolean
+}
+
+const navStructure: NavSection[] = [
+  {
+    id: 'main',
+    items: [
+      { path: '/dashboard', emoji: '📊', icon: 'dashboard', label: 'Dashboard', roles: ['admin', 'support', 'integrator', 'ceo', 'developer'] },
+    ],
+  },
+  {
+    id: 'admin',
+    title: 'Admin',
+    items: [
+      { path: '/products', emoji: '📦', icon: 'inventory_2', label: 'Products', roles: ['admin', 'support', 'integrator', 'ceo'] },
+      { path: '/clients', emoji: '🏢', icon: 'group', label: 'Clients', roles: ['admin', 'support', 'integrator', 'ceo'] },
+    ],
+  },
+  {
+    id: 'tickets',
+    title: 'Tickets',
+    items: [
+      { path: '/tickets', emoji: '🎫', icon: 'confirmation_number', label: 'Support Queue', roles: ['admin', 'support', 'integrator', 'ceo'] },
+      { path: '/dev-tasks', emoji: '🛠️', icon: 'developer_board', label: 'Dev Tasks', roles: ['admin', 'ceo', 'developer'] },
+    ],
+  },
+  {
+    id: 'wip',
+    title: 'Under Development',
+    collapsible: true,
+    defaultCollapsed: true,
+    items: [
+      { path: '/executive', emoji: '🎯', icon: 'monitoring', label: 'Executive', roles: ['ceo', 'admin'] },
+      { path: '/roadmap', emoji: '🗺️', icon: 'map', label: 'Roadmap', roles: ['ceo', 'admin'] },
+      { path: '/requirements', emoji: '📝', icon: 'description', label: 'Requirements', roles: ['admin', 'ceo', 'support'] },
+      { path: '/my-tasks', emoji: '✅', icon: 'task_alt', label: 'My Tasks', roles: ['developer'] },
+      { path: '/sprints', emoji: '🏃', icon: 'sprint', label: 'Sprints', roles: ['admin', 'ceo', 'developer'] },
+      { path: '/backlog', emoji: '📋', icon: 'list', label: 'Backlog', roles: ['admin', 'ceo', 'developer'] },
+      { path: '/ideas', emoji: '💡', icon: 'lightbulb', label: 'Ideas', roles: ['admin', 'support', 'integrator', 'ceo', 'developer'] },
+    ],
+  },
 ]
 
 export default function Sidebar() {
   const location = useLocation()
   const { user, logout } = useAuthStore()
+
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed')
+    return saved === 'true'
+  })
+
+  const [wipExpanded, setWipExpanded] = useState(() => {
+    const saved = localStorage.getItem('sidebar-wip-expanded')
     return saved === 'true'
   })
 
@@ -30,9 +79,178 @@ export default function Sidebar() {
     localStorage.setItem('sidebar-collapsed', isCollapsed.toString())
   }, [isCollapsed])
 
-  const visibleNavItems = navItems.filter(item =>
-    item.roles.includes(user?.role || '')
-  )
+  useEffect(() => {
+    localStorage.setItem('sidebar-wip-expanded', wipExpanded.toString())
+  }, [wipExpanded])
+
+  // Filter sections and items based on user role
+  const visibleSections = useMemo(() => {
+    return navStructure
+      .map(section => ({
+        ...section,
+        items: section.items.filter(item => item.roles.includes(user?.role || '')),
+      }))
+      .filter(section => section.items.length > 0)
+  }, [user?.role])
+
+  const renderNavItem = (item: NavItem, index: number, sectionId: string) => {
+    const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/')
+    const isWip = sectionId === 'wip'
+
+    return (
+      <motion.div
+        key={item.path}
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: index * 0.03 }}
+        className="relative group/nav"
+      >
+        <Link
+          to={item.path}
+          className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all group relative ${
+            isActive
+              ? 'bg-gradient-spark text-white font-semibold shadow-md'
+              : isWip
+                ? 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 hover:text-slate-700 dark:hover:text-slate-200'
+                : 'text-slate-600 dark:text-slate-300 hover:bg-gradient-shimmer hover:border-primary/30'
+          } ${isCollapsed ? 'justify-center' : ''}`}
+        >
+          <span className={`text-lg shrink-0 ${isWip && !isActive ? 'opacity-70' : ''}`} aria-hidden="true">
+            {item.emoji}
+          </span>
+          <AnimatePresence mode="wait">
+            {!isCollapsed && (
+              <motion.span
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: 'auto' }}
+                exit={{ opacity: 0, width: 0 }}
+                transition={{ duration: 0.2 }}
+                className="text-sm flex-1 overflow-hidden whitespace-nowrap"
+              >
+                {item.label}
+              </motion.span>
+            )}
+          </AnimatePresence>
+          {isActive && !isCollapsed && (
+            <motion.div
+              layoutId="activeIndicator"
+              className="size-1.5 rounded-full bg-white shrink-0"
+            />
+          )}
+          {isActive && isCollapsed && (
+            <div className="absolute -right-1 top-1/2 -translate-y-1/2 size-2 rounded-full bg-white" />
+          )}
+        </Link>
+
+        {/* Tooltip for collapsed state */}
+        {isCollapsed && (
+          <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-0 group-hover/nav:opacity-100 transition-opacity duration-200 z-50">
+            <div className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap shadow-lg">
+              {item.label}
+              {isWip && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 bg-amber-500/20 text-amber-300 rounded">WIP</span>}
+              <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900"></div>
+            </div>
+          </div>
+        )}
+      </motion.div>
+    )
+  }
+
+  const renderSection = (section: NavSection, sectionIndex: number) => {
+    const isWip = section.id === 'wip'
+    const showSection = !isWip || wipExpanded || isCollapsed
+
+    return (
+      <div key={section.id} className="relative">
+        {/* Section separator */}
+        {sectionIndex > 0 && (
+          <div className="mx-3 my-3 border-t border-slate-200 dark:border-slate-700" />
+        )}
+
+        {/* Section header */}
+        {section.title && !isCollapsed && (
+          <div className="px-3 mb-2">
+            {section.collapsible ? (
+              <button
+                onClick={() => setWipExpanded(!wipExpanded)}
+                className="w-full flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                    {section.title}
+                  </span>
+                  {isWip && (
+                    <span className="text-[9px] px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded font-semibold">
+                      BETA
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  {!wipExpanded && (
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                      {section.items.length}
+                    </span>
+                  )}
+                  <motion.span
+                    animate={{ rotate: wipExpanded ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="material-symbols-outlined text-[14px] text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors"
+                  >
+                    expand_more
+                  </motion.span>
+                </div>
+              </button>
+            ) : (
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                {section.title}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Collapsed sidebar - show WIP indicator */}
+        {section.title && isCollapsed && sectionIndex > 0 && (
+          <div className="flex justify-center mb-2">
+            {isWip ? (
+              <button
+                onClick={() => setWipExpanded(!wipExpanded)}
+                className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors group/wip relative"
+                title={wipExpanded ? 'Collapse WIP section' : `Expand WIP section (${section.items.length} items)`}
+              >
+                <span className="material-symbols-outlined text-[14px] text-amber-500">
+                  {wipExpanded ? 'expand_less' : 'construction'}
+                </span>
+                {/* Tooltip */}
+                <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-0 group-hover/wip:opacity-100 transition-opacity duration-200 z-50">
+                  <div className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap shadow-lg">
+                    {wipExpanded ? 'Collapse' : `${section.items.length} WIP features`}
+                    <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900"></div>
+                  </div>
+                </div>
+              </button>
+            ) : (
+              <div className="w-8 h-px bg-slate-200 dark:bg-slate-700 rounded" />
+            )}
+          </div>
+        )}
+
+        {/* Section items */}
+        <AnimatePresence mode="wait">
+          {showSection && (
+            <motion.div
+              initial={section.collapsible ? { height: 0, opacity: 0 } : false}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={section.collapsible ? { height: 0, opacity: 0 } : undefined}
+              transition={{ duration: 0.2 }}
+              className={`flex flex-col gap-0.5 overflow-hidden ${isWip ? 'opacity-90' : ''}`}
+            >
+              {section.items.map((item, index) => renderNavItem(item, index, section.id))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    )
+  }
 
   return (
     <motion.aside
@@ -82,62 +300,8 @@ export default function Sidebar() {
       </motion.button>
 
       {/* Nav */}
-      <nav className="flex-1 px-4 flex flex-col gap-1" role="navigation" aria-label="Main navigation">
-        {visibleNavItems.map((item, index) => {
-          const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/')
-          return (
-            <motion.div
-              key={item.path}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="relative group/nav"
-            >
-              <Link
-                to={item.path}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group relative ${
-                  isActive
-                    ? 'bg-gradient-spark text-white font-semibold shadow-md'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-gradient-shimmer hover:border-primary/30'
-                } ${isCollapsed ? 'justify-center' : ''}`}
-              >
-                <span className="text-xl shrink-0" aria-hidden="true">{item.emoji}</span>
-                <AnimatePresence mode="wait">
-                  {!isCollapsed && (
-                    <motion.span
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: 'auto' }}
-                      exit={{ opacity: 0, width: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="text-sm flex-1 overflow-hidden whitespace-nowrap"
-                    >
-                      {item.label}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-                {isActive && !isCollapsed && (
-                  <motion.div
-                    layoutId="activeIndicator"
-                    className="size-1.5 rounded-full bg-white shrink-0"
-                  />
-                )}
-                {isActive && isCollapsed && (
-                  <div className="absolute -right-1 top-1/2 -translate-y-1/2 size-2 rounded-full bg-white" />
-                )}
-              </Link>
-
-              {/* Tooltip for collapsed state */}
-              {isCollapsed && (
-                <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-0 group-hover/nav:opacity-100 transition-opacity duration-200 z-50">
-                  <div className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap shadow-lg">
-                    {item.label}
-                    <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900"></div>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          )
-        })}
+      <nav className="flex-1 px-3 flex flex-col overflow-y-auto" role="navigation" aria-label="Main navigation">
+        {visibleSections.map((section, index) => renderSection(section, index))}
       </nav>
 
       {/* Status Indicator */}

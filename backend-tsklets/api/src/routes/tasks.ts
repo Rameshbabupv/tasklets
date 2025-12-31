@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { db } from '../db/index.js'
-import { devTasks, taskAssignments, supportTicketTasks, tickets, features, epics, products } from '../db/schema.js'
-import { eq, desc, inArray } from 'drizzle-orm'
+import { devTasks, taskAssignments, supportTicketTasks, tickets, features, epics, products, users, modules, components, addons } from '../db/schema.js'
+import { eq, desc, inArray, or, sql } from 'drizzle-orm'
 import { authenticate, requireInternal } from '../middleware/auth.js'
 import { generateIssueKey } from '../utils/issueKey.js'
 
@@ -540,6 +540,107 @@ taskRoutes.patch('/:id/close', async (req, res) => {
     res.json({ task: updated })
   } catch (error) {
     console.error('Close task error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// List all dev tasks with full details (for DevTasks page)
+taskRoutes.get('/all', requireInternal, async (req, res) => {
+  try {
+    const { tenantId, userId } = req.user!
+
+    // Raw query to get all tasks with joined data
+    const tasksWithDetails = await db
+      .select({
+        id: devTasks.id,
+        tenantId: devTasks.tenantId,
+        productId: devTasks.productId,
+        featureId: devTasks.featureId,
+        issueKey: devTasks.issueKey,
+        title: devTasks.title,
+        description: devTasks.description,
+        type: devTasks.type,
+        status: devTasks.status,
+        priority: devTasks.priority,
+        storyPoints: devTasks.storyPoints,
+        implementorId: devTasks.implementorId,
+        developerId: devTasks.developerId,
+        testerId: devTasks.testerId,
+        moduleId: devTasks.moduleId,
+        componentId: devTasks.componentId,
+        addonId: devTasks.addonId,
+        supportTicketId: devTasks.supportTicketId,
+        severity: devTasks.severity,
+        environment: devTasks.environment,
+        labels: devTasks.labels,
+        dueDate: devTasks.dueDate,
+        createdAt: devTasks.createdAt,
+        updatedAt: devTasks.updatedAt,
+        // Product info
+        productName: products.name,
+        productCode: products.code,
+        // Module info
+        moduleName: modules.name,
+        // Component info
+        componentName: components.name,
+        // Addon info
+        addonName: addons.name,
+      })
+      .from(devTasks)
+      .leftJoin(products, eq(devTasks.productId, products.id))
+      .leftJoin(modules, eq(devTasks.moduleId, modules.id))
+      .leftJoin(components, eq(devTasks.componentId, components.id))
+      .leftJoin(addons, eq(devTasks.addonId, addons.id))
+      .where(eq(devTasks.tenantId, tenantId))
+      .orderBy(desc(devTasks.createdAt))
+
+    // Get user details for implementor, developer, tester
+    const userIds = new Set<number>()
+    tasksWithDetails.forEach(t => {
+      if (t.implementorId) userIds.add(t.implementorId)
+      if (t.developerId) userIds.add(t.developerId)
+      if (t.testerId) userIds.add(t.testerId)
+    })
+
+    const userMap: Record<number, { name: string; email: string }> = {}
+    if (userIds.size > 0) {
+      const usersList = await db.select({ id: users.id, name: users.name, email: users.email })
+        .from(users)
+        .where(inArray(users.id, Array.from(userIds)))
+      usersList.forEach(u => {
+        userMap[u.id] = { name: u.name, email: u.email }
+      })
+    }
+
+    // Get support ticket details
+    const ticketIds = tasksWithDetails.filter(t => t.supportTicketId).map(t => t.supportTicketId!)
+    const ticketMap: Record<string, { issueKey: string; title: string; status: string }> = {}
+    if (ticketIds.length > 0) {
+      const ticketsList = await db.select({
+        id: tickets.id,
+        issueKey: tickets.issueKey,
+        title: tickets.title,
+        status: tickets.status
+      })
+        .from(tickets)
+        .where(inArray(tickets.id, ticketIds))
+      ticketsList.forEach(t => {
+        ticketMap[t.id] = { issueKey: t.issueKey || '', title: t.title, status: t.status }
+      })
+    }
+
+    // Combine all data
+    const enrichedTasks = tasksWithDetails.map(task => ({
+      ...task,
+      implementorName: task.implementorId ? userMap[task.implementorId]?.name : null,
+      developerName: task.developerId ? userMap[task.developerId]?.name : null,
+      testerName: task.testerId ? userMap[task.testerId]?.name : null,
+      supportTicket: task.supportTicketId ? ticketMap[task.supportTicketId] : null,
+    }))
+
+    res.json({ tasks: enrichedTasks, currentUserId: userId })
+  } catch (error) {
+    console.error('List all tasks error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
