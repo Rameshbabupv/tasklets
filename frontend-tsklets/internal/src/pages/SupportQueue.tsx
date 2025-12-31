@@ -73,6 +73,8 @@ export default function SupportQueue() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string[]>([])
   const [priorityFilter, setPriorityFilter] = useState<number[]>([])
+  const [clientFilter, setClientFilter] = useState<string>('')
+  const [showEscalatedOnly, setShowEscalatedOnly] = useState(false)
 
   // Sorting (for list view)
   const [sortField, setSortField] = useState<SortField>('createdAt')
@@ -146,6 +148,16 @@ export default function SupportQueue() {
       })
     }
 
+    // Client filter
+    if (clientFilter) {
+      result = result.filter(t => t.clientName === clientFilter)
+    }
+
+    // Escalated filter
+    if (showEscalatedOnly) {
+      result = result.filter(t => isEscalated(t))
+    }
+
     // Sort (for list view)
     if (viewMode === 'list') {
       result.sort((a, b) => {
@@ -189,7 +201,18 @@ export default function SupportQueue() {
     }
 
     return result
-  }, [tickets, searchQuery, statusFilter, priorityFilter, sortField, sortDirection, viewMode])
+  }, [tickets, searchQuery, statusFilter, priorityFilter, clientFilter, showEscalatedOnly, sortField, sortDirection, viewMode])
+
+  // Get unique clients for filter dropdown
+  const uniqueClients = useMemo(() => {
+    const clients = tickets
+      .map(t => t.clientName)
+      .filter((name): name is string => !!name)
+    return [...new Set(clients)].sort()
+  }, [tickets])
+
+  // Count escalated tickets
+  const escalatedCount = useMemo(() => tickets.filter(t => isEscalated(t)).length, [tickets])
 
   const getColumnTickets = (status: string) => filteredTickets.filter(t => t.status === status)
 
@@ -218,9 +241,11 @@ export default function SupportQueue() {
     setSearchQuery('')
     setStatusFilter([])
     setPriorityFilter([])
+    setClientFilter('')
+    setShowEscalatedOnly(false)
   }
 
-  const hasActiveFilters = searchQuery || statusFilter.length > 0 || priorityFilter.length > 0
+  const hasActiveFilters = searchQuery || statusFilter.length > 0 || priorityFilter.length > 0 || clientFilter || showEscalatedOnly
 
   // Drag handlers for board view
   const handleDragStart = (ticket: Ticket) => {
@@ -350,6 +375,47 @@ export default function SupportQueue() {
                 })}
               </div>
             </div>
+
+            <div className="h-6 w-px" style={{ backgroundColor: 'var(--border-primary)' }} />
+
+            {/* Client Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Client:</span>
+              <select
+                value={clientFilter}
+                onChange={(e) => setClientFilter(e.target.value)}
+                className="px-2.5 py-1 rounded-md text-xs font-medium border-none focus:ring-2 focus:ring-violet-500/30"
+                style={{ backgroundColor: 'var(--bg-tertiary)', color: clientFilter ? 'var(--text-primary)' : 'var(--text-muted)' }}
+              >
+                <option value="">All Clients</option>
+                {uniqueClients.map(client => (
+                  <option key={client} value={client}>{client}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="h-6 w-px" style={{ backgroundColor: 'var(--border-primary)' }} />
+
+            {/* Escalated Toggle */}
+            <button
+              onClick={() => setShowEscalatedOnly(!showEscalatedOnly)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all border ${
+                showEscalatedOnly
+                  ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
+                  : 'border-transparent hover:bg-slate-100 dark:hover:bg-slate-700'
+              }`}
+              style={!showEscalatedOnly ? { color: 'var(--text-muted)' } : undefined}
+            >
+              <span className="material-symbols-outlined text-sm">priority_high</span>
+              Escalated
+              {escalatedCount > 0 && (
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  showEscalatedOnly ? 'bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200' : 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400'
+                }`}>
+                  {escalatedCount}
+                </span>
+              )}
+            </button>
 
             {/* Clear Filters */}
             {hasActiveFilters && (
