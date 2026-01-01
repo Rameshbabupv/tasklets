@@ -231,27 +231,65 @@ export default function AppLayout() {
           )}
         </div>
 
-        {/* Sidebar Footer - only when expanded */}
-        {!collapsed && (
-          <div className="mt-auto pt-4">
-            <div className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border" style={{ borderColor: 'var(--border-primary)' }}>
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-lg">💡</span>
-                <p className="font-semibold text-xs" style={{ color: 'var(--text-primary)' }}>Need Help?</p>
+        {/* Sidebar Footer */}
+        <div className="mt-auto pt-4 space-y-3">
+          {/* Build Info */}
+          {collapsed ? (
+            <div className="flex justify-center">
+              <div className="relative group/build">
+                <div className="size-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center cursor-help">
+                  <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400">
+                    #{__BUILD_NUMBER__}
+                  </span>
+                </div>
+                {/* Tooltip */}
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 dark:bg-slate-700 text-white text-[10px] rounded-lg opacity-0 group-hover/build:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                  <div className="font-semibold">v{__APP_VERSION__} • Build #{__BUILD_NUMBER__}</div>
+                  <div className="text-slate-300 mt-0.5">
+                    {new Date(__BUILD_DATE__).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} • {__GIT_HASH__}
+                  </div>
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900 dark:border-t-slate-700" />
+                </div>
               </div>
-              <p className="text-[11px] mb-2" style={{ color: 'var(--text-secondary)' }}>
-                Browse our knowledge base.
-              </p>
-              <Link
-                to="/help"
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                View articles
-                <span className="material-symbols-outlined text-xs">arrow_forward</span>
-              </Link>
             </div>
-          </div>
-        )}
+          ) : (
+            <>
+              <div className="px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-300">
+                    v{__APP_VERSION__} • Build #{__BUILD_NUMBER__}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mt-0.5">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                    {new Date(__BUILD_DATE__).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                    {__GIT_HASH__}
+                  </span>
+                </div>
+              </div>
+
+              {/* Need Help Section */}
+              <div className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border" style={{ borderColor: 'var(--border-primary)' }}>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-lg">💡</span>
+                  <p className="font-semibold text-xs" style={{ color: 'var(--text-primary)' }}>Need Help?</p>
+                </div>
+                <p className="text-[11px] mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  Browse our knowledge base.
+                </p>
+                <Link
+                  to="/help"
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  View articles
+                  <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                </Link>
+              </div>
+            </>
+          )}
+        </div>
       </aside>
 
       {/* Mobile Sidebar Overlay */}

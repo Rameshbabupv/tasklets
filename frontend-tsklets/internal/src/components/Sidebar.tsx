@@ -324,6 +324,46 @@ export default function Sidebar() {
         <ThemeToggle />
       </div>
 
+      {/* Build Info */}
+      <div className={`px-4 mb-4 ${isCollapsed ? 'flex justify-center' : ''}`}>
+        {isCollapsed ? (
+          <div className="relative group/build">
+            <div className="size-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center cursor-help">
+              <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400">
+                #{__BUILD_NUMBER__}
+              </span>
+            </div>
+            {/* Tooltip */}
+            <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-0 group-hover/build:opacity-100 transition-opacity duration-200 z-50">
+              <div className="bg-slate-900 text-white px-3 py-2 rounded-lg text-xs whitespace-nowrap shadow-lg">
+                <div className="font-semibold">v{__APP_VERSION__} • Build #{__BUILD_NUMBER__}</div>
+                <div className="text-slate-400 mt-1">
+                  {new Date(__BUILD_DATE__).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </div>
+                <div className="text-slate-500 font-mono">{__GIT_HASH__}</div>
+                <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900"></div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-300">
+                v{__APP_VERSION__} • Build #{__BUILD_NUMBER__}
+              </span>
+            </div>
+            <div className="flex items-center justify-between mt-0.5">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                {new Date(__BUILD_DATE__).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
+              <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                {__GIT_HASH__}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* User */}
       <div className="p-4 border-t border-slate-200 dark:border-slate-700">
         {isCollapsed ? (
