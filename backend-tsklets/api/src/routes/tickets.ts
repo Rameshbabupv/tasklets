@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { db } from '../db/index.js'
 import { tickets, attachments, ticketComments, ticketLinks, clients, users, products, ticketWatchers, supportTicketTasks, devTasks, ticketAuditLog } from '../db/schema.js'
-import { eq, and, desc, or } from 'drizzle-orm'
+import { eq, and, desc, or, count, sql, inArray } from 'drizzle-orm'
 import { authenticate, requireInternal, requireClientAdmin } from '../middleware/auth.js'
 import { upload } from '../middleware/upload.js'
 import { generateIssueKey } from '../utils/issueKey.js'
@@ -271,12 +271,12 @@ ticketRoutes.get('/', async (req, res) => {
       const commentCounts = await db
         .select({
           ticketId: ticketComments.ticketId,
-          count: db.$count(ticketComments.id),
+          count: count(ticketComments.id),
         })
         .from(ticketComments)
         .where(
           and(
-            ticketComments.ticketId ? or(...ticketIds.map(id => eq(ticketComments.ticketId, id))) : undefined,
+            inArray(ticketComments.ticketId, ticketIds),
             isInternal ? undefined : eq(ticketComments.isInternal, false)
           )
         )
@@ -286,12 +286,10 @@ ticketRoutes.get('/', async (req, res) => {
       const attachmentCounts = await db
         .select({
           ticketId: attachments.ticketId,
-          count: db.$count(attachments.id),
+          count: count(attachments.id),
         })
         .from(attachments)
-        .where(
-          attachments.ticketId ? or(...ticketIds.map(id => eq(attachments.ticketId, id))) : undefined
-        )
+        .where(inArray(attachments.ticketId, ticketIds))
         .groupBy(attachments.ticketId)
 
       // Build counts map
