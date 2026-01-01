@@ -1,10 +1,9 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { useAuthStore } from '../store/auth'
 import { StatusBadge, PriorityPill } from '@tsklets/ui'
-import ThemeToggle from '../components/ThemeToggle'
 import TicketDetailModal from '../components/TicketDetailModal'
 import type { Ticket } from '@tsklets/types'
 
@@ -48,10 +47,9 @@ function stringToColor(str: string): string {
   return colors[Math.abs(hash) % colors.length]
 }
 
-export default function MyTickets() {
-  const navigate = useNavigate()
+export default function AllTickets() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { token, user, logout } = useAuthStore()
+  const { token } = useAuthStore()
 
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
@@ -61,6 +59,7 @@ export default function MyTickets() {
   // Filter state from URL params
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all')
   const [priorityFilter, setPriorityFilter] = useState(searchParams.get('priority') || 'all')
+  const [reporterFilter, setReporterFilter] = useState(searchParams.get('reporter') || 'all')
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
   const [currentPage, setCurrentPage] = useState(parseInt(searchParams.get('page') || '1'))
 
@@ -76,10 +75,11 @@ export default function MyTickets() {
     const params: Record<string, string> = {}
     if (statusFilter !== 'all') params.status = statusFilter
     if (priorityFilter !== 'all') params.priority = priorityFilter
+    if (reporterFilter !== 'all') params.reporter = reporterFilter
     if (searchQuery) params.search = searchQuery
     if (currentPage > 1) params.page = currentPage.toString()
     setSearchParams(params)
-  }, [statusFilter, priorityFilter, searchQuery, currentPage])
+  }, [statusFilter, priorityFilter, reporterFilter, searchQuery, currentPage])
 
   // Debounce search input
   useEffect(() => {
@@ -109,6 +109,18 @@ export default function MyTickets() {
     }
   }
 
+  // Get unique reporters for filter dropdown
+  const uniqueReporters = useMemo(() => {
+    const reporters = new Map<string, string>()
+    tickets.forEach(ticket => {
+      const name = ticket.reporterName || ticket.createdByName || 'Unknown'
+      if (!reporters.has(name)) {
+        reporters.set(name, name)
+      }
+    })
+    return Array.from(reporters.values()).sort()
+  }, [tickets])
+
   // Filter and search logic
   const filteredTickets = useMemo(() => {
     return tickets.filter(ticket => {
@@ -121,6 +133,14 @@ export default function MyTickets() {
       if (priorityFilter !== 'all') {
         const priorityNum = parseInt(priorityFilter.replace('P', ''))
         if (ticket.clientPriority !== priorityNum) {
+          return false
+        }
+      }
+
+      // Reporter filter
+      if (reporterFilter !== 'all') {
+        const reporterName = ticket.reporterName || ticket.createdByName || 'Unknown'
+        if (reporterName !== reporterFilter) {
           return false
         }
       }
@@ -139,7 +159,7 @@ export default function MyTickets() {
 
       return true
     })
-  }, [tickets, statusFilter, priorityFilter, searchQuery])
+  }, [tickets, statusFilter, priorityFilter, reporterFilter, searchQuery])
 
   // Pagination logic
   const totalPages = Math.ceil(filteredTickets.length / ITEMS_PER_PAGE)
@@ -152,12 +172,14 @@ export default function MyTickets() {
   const activeFilterCount = [
     statusFilter !== 'all',
     priorityFilter !== 'all',
+    reporterFilter !== 'all',
     searchQuery !== ''
   ].filter(Boolean).length
 
   function clearFilters() {
     setStatusFilter('all')
     setPriorityFilter('all')
+    setReporterFilter('all')
     setSearchInput('')
     setSearchQuery('')
     setCurrentPage(1)
@@ -178,52 +200,7 @@ export default function MyTickets() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      {/* Header */}
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="bg-gradient-to-r from-white to-purple-50/30 dark:from-slate-800 dark:to-purple-900/30 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <button onClick={() => navigate('/')} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 text-white shadow-lg">
-                  <span className="material-symbols-outlined text-xl">support_agent</span>
-                </div>
-                <div>
-                  <span className="font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Support Desk</span>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Client Portal</p>
-                </div>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2 sm:gap-4">
-              <ThemeToggle />
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="text-right hidden md:block">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{user?.name}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{user?.role}</p>
-                </div>
-                <motion.button
-                  onClick={logout}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="text-slate-400 hover:text-primary transition-colors p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg"
-                  aria-label="Logout"
-                >
-                  <span className="material-symbols-outlined">logout</span>
-                </motion.button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <div className="space-y-6">
         {/* Page Header with Filters Toggle */}
         <div className="mb-6 flex items-center justify-between">
           <div>
@@ -263,7 +240,7 @@ export default function MyTickets() {
               className="mb-6 overflow-hidden"
             >
               <div
-                className="p-4 rounded-lg border grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"
+                className="p-4 rounded-lg border grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4"
                 style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}
               >
                 {/* Search Input */}
@@ -339,9 +316,31 @@ export default function MyTickets() {
                   </select>
                 </div>
 
+                {/* Reporter Filter */}
+                <div>
+                  <label className="block text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                    Reporter
+                  </label>
+                  <select
+                    value={reporterFilter}
+                    onChange={(e) => { setReporterFilter(e.target.value); setCurrentPage(1) }}
+                    className="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    style={{
+                      backgroundColor: 'var(--bg-primary)',
+                      borderColor: 'var(--border-primary)',
+                      color: 'var(--text-primary)'
+                    }}
+                  >
+                    <option value="all">All Reporters</option>
+                    {uniqueReporters.map(reporter => (
+                      <option key={reporter} value={reporter}>{reporter}</option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Clear Filters Button */}
                 {activeFilterCount > 0 && (
-                  <div className="md:col-span-4 flex justify-end">
+                  <div className="md:col-span-5 flex justify-end">
                     <button
                       onClick={clearFilters}
                       className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
@@ -658,7 +657,6 @@ export default function MyTickets() {
             )}
           </>
         )}
-      </main>
 
       {/* Ticket Detail Modal */}
       <TicketDetailModal

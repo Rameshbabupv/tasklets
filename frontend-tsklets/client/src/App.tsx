@@ -4,7 +4,7 @@ import { useAuthStore } from './store/auth'
 import { useTheme } from './hooks/useTheme'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
-import MyTickets from './pages/MyTickets'
+import AllTickets from './pages/AllTickets'
 import NewTicket from './pages/NewTicket'
 import TicketDetail from './pages/TicketDetail'
 import UserManagement from './pages/UserManagement'
@@ -40,7 +40,7 @@ export default function App() {
           }
         >
           <Route path="/" element={<Dashboard />} />
-          <Route path="/tickets" element={<MyTickets />} />
+          <Route path="/tickets" element={<AllTickets />} />
           <Route path="/tickets/new" element={<NewTicket />} />
           <Route path="/tickets/:id" element={<TicketDetail />} />
           <Route path="/users" element={<UserManagement />} />
