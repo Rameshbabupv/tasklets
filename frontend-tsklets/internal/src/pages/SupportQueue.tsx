@@ -3,6 +3,17 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Sidebar from '../components/Sidebar'
 import { useAuthStore } from '../store/auth'
 import TicketModal from '../components/TicketModal'
+import DevTaskModal from '../components/DevTaskModal'
+
+interface DevTaskTicket {
+  id: string
+  issueKey: string
+  title: string
+  description: string
+  productId: number
+  productName: string | null
+  productCode: string | null
+}
 
 interface Ticket {
   id: number
@@ -68,6 +79,9 @@ export default function SupportQueue() {
   const [loading, setLoading] = useState(true)
   const [viewMode, setViewMode] = useState<ViewMode>('board')
   const [selectedTicketKey, setSelectedTicketKey] = useState<string | null>(null)
+
+  // Dev Task Modal state
+  const [devTaskTicket, setDevTaskTicket] = useState<DevTaskTicket | null>(null)
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
@@ -690,6 +704,23 @@ export default function SupportQueue() {
           issueKey={selectedTicketKey}
           onClose={() => setSelectedTicketKey(null)}
           onStatusChange={fetchTickets}
+          onCreateDevTask={(ticket) => {
+            // Close ticket modal and open dev task modal
+            setSelectedTicketKey(null)
+            setDevTaskTicket(ticket)
+          }}
+        />
+      )}
+
+      {/* Dev Task Modal */}
+      {devTaskTicket && (
+        <DevTaskModal
+          ticket={devTaskTicket}
+          onClose={() => setDevTaskTicket(null)}
+          onSuccess={(issueKey) => {
+            setDevTaskTicket(null)
+            fetchTickets()
+          }}
         />
       )}
     </div>

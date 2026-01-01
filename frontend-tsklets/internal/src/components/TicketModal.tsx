@@ -119,10 +119,21 @@ interface TicketLink {
   ticket: LinkedTicket | null
 }
 
+interface DevTaskTicket {
+  id: string
+  issueKey: string
+  title: string
+  description: string
+  productId: number
+  productName: string | null
+  productCode: string | null
+}
+
 interface TicketModalProps {
   issueKey: string
   onClose: () => void
   onStatusChange?: () => void
+  onCreateDevTask?: (ticket: DevTaskTicket) => void
 }
 
 // Type configuration
@@ -160,7 +171,7 @@ const priorityColors: Record<number, string> = {
   5: 'bg-slate-400',
 }
 
-export default function TicketModal({ issueKey, onClose, onStatusChange }: TicketModalProps) {
+export default function TicketModal({ issueKey, onClose, onStatusChange, onCreateDevTask }: TicketModalProps) {
   const { token } = useAuthStore()
   const [ticket, setTicket] = useState<Ticket | null>(null)
   const [attachments, setAttachments] = useState<Attachment[]>([])
@@ -318,6 +329,27 @@ export default function TicketModal({ issueKey, onClose, onStatusChange }: Ticke
     } catch (err) {
       console.error('Failed to mark as rebuttal', err)
     }
+  }
+
+  // Handle create dev task - close this modal and trigger callback
+  const handleCreateDevTask = () => {
+    if (!ticket) return
+
+    // Close this modal first
+    setIsClosing(true)
+
+    // After close animation, trigger the callback with ticket data
+    setTimeout(() => {
+      onCreateDevTask?.({
+        id: ticket.id,
+        issueKey: ticket.issueKey,
+        title: ticket.title,
+        description: ticket.description,
+        productId: ticket.productId,
+        productName: ticket.productName,
+        productCode: ticket.productCode,
+      })
+    }, 200)
   }
 
   const formatDate = (date: string) => {
@@ -806,6 +838,17 @@ export default function TicketModal({ issueKey, onClose, onStatusChange }: Ticke
                 Actions
               </h3>
               <div className="space-y-2">
+                {/* Create Dev Task Button - Primary action */}
+                {ticket.status !== 'closed' && ticket.status !== 'resolved' && ticket.status !== 'cancelled' && onCreateDevTask && (
+                  <button
+                    onClick={handleCreateDevTask}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-sm font-semibold transition-all shadow-md hover:shadow-lg"
+                  >
+                    <span className="material-symbols-outlined text-lg">add_task</span>
+                    Create Dev Task
+                  </button>
+                )}
+
                 {/* Mark as Rebuttal Button */}
                 {ticket.status !== 'rebuttal' && ticket.status !== 'closed' && ticket.status !== 'resolved' && (
                   <button
