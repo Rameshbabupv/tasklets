@@ -247,6 +247,7 @@ ticketRoutes.get('/', async (req, res) => {
         labels: tickets.labels,
         createdBy: tickets.createdBy,
         createdByName: users.name,
+        reporterId: tickets.reporterId,
         assignedTo: tickets.assignedTo,
         tenantId: tickets.tenantId,
         clientId: tickets.clientId,
@@ -308,11 +309,27 @@ ticketRoutes.get('/', async (req, res) => {
       })
     }
 
-    // Merge counts into results
+    // Get reporter names for tickets where reporterId differs from createdBy
+    const reporterIds = [...new Set(results.filter(t => t.reporterId && t.reporterId !== t.createdBy).map(t => t.reporterId!))]
+    const reporterNames: Record<number, string> = {}
+
+    if (reporterIds.length > 0) {
+      const reporters = await db
+        .select({ id: users.id, name: users.name })
+        .from(users)
+        .where(inArray(users.id, reporterIds))
+
+      reporters.forEach(r => {
+        reporterNames[r.id] = r.name
+      })
+    }
+
+    // Merge counts and reporter names into results
     const ticketsWithCounts = results.map(t => ({
       ...t,
       commentCount: counts[t.id]?.commentCount || 0,
       attachmentCount: counts[t.id]?.attachmentCount || 0,
+      reporterName: t.reporterId === t.createdBy ? t.createdByName : (reporterNames[t.reporterId!] || t.createdByName),
     }))
 
     res.json({ tickets: ticketsWithCounts })

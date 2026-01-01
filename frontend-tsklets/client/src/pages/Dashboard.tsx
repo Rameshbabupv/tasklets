@@ -157,7 +157,7 @@ export default function Dashboard() {
                 <thead>
                   <tr className="border-b text-left text-xs font-semibold uppercase tracking-wider" style={{ borderColor: 'var(--border-primary)', color: 'var(--text-muted)' }}>
                     <th className="px-5 py-3">Ticket</th>
-                    <th className="px-5 py-3">Created By</th>
+                    <th className="px-5 py-3">Reporter</th>
                     <th className="px-5 py-3">Status</th>
                     <th className="px-5 py-3">Priority</th>
                     <th className="px-5 py-3 text-center">
@@ -204,7 +204,7 @@ export default function Dashboard() {
                       </td>
                       <td className="px-5 py-4">
                         <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                          {(ticket as any).createdByName || 'Unknown'}
+                          {(ticket as any).reporterName || (ticket as any).createdByName || 'Unknown'}
                         </span>
                       </td>
                       <td className="px-5 py-4">
@@ -265,7 +265,7 @@ export default function Dashboard() {
                   </div>
                   <div className="flex items-center gap-2 mt-1 mb-2">
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      by {(ticket as any).createdByName || 'Unknown'}
+                      by {(ticket as any).reporterName || (ticket as any).createdByName || 'Unknown'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
