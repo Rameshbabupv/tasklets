@@ -24,6 +24,30 @@ const priorityLabels: Record<number, string> = {
 
 const ITEMS_PER_PAGE = 20
 
+// Get initials from name
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
+
+// Generate consistent color from string
+function stringToColor(str: string): string {
+  const colors = [
+    'bg-rose-500', 'bg-pink-500', 'bg-fuchsia-500', 'bg-purple-500',
+    'bg-violet-500', 'bg-indigo-500', 'bg-blue-500', 'bg-cyan-500',
+    'bg-teal-500', 'bg-emerald-500', 'bg-amber-500', 'bg-orange-500',
+  ]
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return colors[Math.abs(hash) % colors.length]
+}
+
 export default function MyTickets() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -418,7 +442,7 @@ export default function MyTickets() {
                   transition={{ delay: index * 0.05 }}
                 >
                   <button
-                    onClick={() => setSelectedTicketId(ticket.id)}
+                    onClick={() => setSelectedTicketId(Number(ticket.id))}
                     className="block w-full text-left rounded-lg border p-4 hover:border-primary/50 hover:shadow-lg transition-all"
                     style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}
                   >
@@ -435,10 +459,26 @@ export default function MyTickets() {
                       {ticket.title}
                     </h3>
 
+                    {/* Reporter */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <div
+                        className={`size-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${stringToColor(ticket.reporterName || ticket.createdByName || 'Unknown')}`}
+                      >
+                        {getInitials(ticket.reporterName || ticket.createdByName || 'U')}
+                      </div>
+                      <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                        {ticket.reporterName || ticket.createdByName || 'Unknown'}
+                      </span>
+                    </div>
+
                     {/* Footer */}
                     <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-muted)' }}>
-                      <PriorityPill priority={ticket.clientPriority} />
-                      <span>{formatDate(ticket.createdAt)}</span>
+                      <div className="flex items-center gap-3">
+                        <PriorityPill priority={ticket.clientPriority} />
+                        <span className="flex items-center gap-1">💬 {ticket.commentCount || 0}</span>
+                        <span className="flex items-center gap-1">📎 {ticket.attachmentCount || 0}</span>
+                      </div>
+                      <span>{formatDate(ticket.updatedAt)}</span>
                     </div>
                   </button>
                 </motion.div>
@@ -452,11 +492,12 @@ export default function MyTickets() {
                   <tr className="text-left text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-200">
                     <th className="py-3 px-4">Key</th>
                     <th className="py-3 px-4">Subject</th>
+                    <th className="py-3 px-4">Reporter</th>
                     <th className="py-3 px-4">Type</th>
                     <th className="py-3 px-4">Status</th>
                     <th className="py-3 px-4">Priority</th>
-                    <th className="py-3 px-4">Created By</th>
-                    <th className="py-3 px-4">Created</th>
+                    <th className="py-3 px-4 text-center" title="Comments">💬</th>
+                    <th className="py-3 px-4 text-center" title="Attachments">📎</th>
                     <th className="py-3 px-4">Updated</th>
                   </tr>
                 </thead>
@@ -472,7 +513,7 @@ export default function MyTickets() {
                     >
                       <td className="py-3 px-4">
                         <button
-                          onClick={() => setSelectedTicketId(ticket.id)}
+                          onClick={() => setSelectedTicketId(Number(ticket.id))}
                           className="font-mono text-sm font-semibold text-primary hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors"
                         >
                           {ticket.issueKey || `#${ticket.id}`}
@@ -485,6 +526,19 @@ export default function MyTickets() {
                         >
                           {ticket.title}
                         </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`size-7 rounded-full flex items-center justify-center text-white text-xs font-bold ${stringToColor(ticket.reporterName || ticket.createdByName || 'Unknown')}`}
+                            title={ticket.reporterName || ticket.createdByName || 'Unknown'}
+                          >
+                            {getInitials(ticket.reporterName || ticket.createdByName || 'U')}
+                          </div>
+                          <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                            {ticket.reporterName || ticket.createdByName || 'Unknown'}
+                          </span>
+                        </div>
                       </td>
                       <td className="py-3 px-4">
                         <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
@@ -501,11 +555,11 @@ export default function MyTickets() {
                       <td className="py-3 px-4">
                         <PriorityPill priority={ticket.clientPriority} />
                       </td>
-                      <td className="py-3 px-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        {ticket.createdByName || 'Unknown'}
+                      <td className="py-3 px-4 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>
+                        {ticket.commentCount || 0}
                       </td>
-                      <td className="py-3 px-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        {formatDate(ticket.createdAt)}
+                      <td className="py-3 px-4 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>
+                        {ticket.attachmentCount || 0}
                       </td>
                       <td className="py-3 px-4 text-sm" style={{ color: 'var(--text-secondary)' }}>
                         {formatDate(ticket.updatedAt)}

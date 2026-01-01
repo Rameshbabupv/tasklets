@@ -239,7 +239,7 @@ export default function Dashboard() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.3 + index * 0.03 }}
-                      onClick={() => setSelectedTicketId(ticket.id)}
+                      onClick={() => setSelectedTicketId(Number(ticket.id))}
                       className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors group"
                     >
                       <td className="px-5 py-4">
@@ -315,7 +315,7 @@ export default function Dashboard() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 + index * 0.03 }}
-                  onClick={() => setSelectedTicketId(ticket.id)}
+                  onClick={() => setSelectedTicketId(Number(ticket.id))}
                   className="p-4 active:bg-slate-50 dark:active:bg-slate-800 cursor-pointer"
                 >
                   <div className="flex items-start justify-between gap-3 mb-2">

@@ -59,6 +59,8 @@ export interface Ticket {
   userId: number
   createdBy?: number
   createdByName?: string  // Name of the user who created the ticket
+  reporterId?: number  // ID of the reporter (same as createdBy)
+  reporterName?: string  // Name of the reporter
   assignedTo?: number
   integratorId?: number
   tenantId: number
@@ -76,6 +78,9 @@ export interface Ticket {
   estimate?: string
   resolution?: string
   resolutionNote?: string
+  // Aggregated counts (populated by list APIs)
+  commentCount?: number
+  attachmentCount?: number
   createdAt: string
   updatedAt: string
 }
