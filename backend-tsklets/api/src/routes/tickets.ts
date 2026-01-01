@@ -260,7 +260,64 @@ ticketRoutes.get('/', async (req, res) => {
       .where(whereClause)
       .orderBy(desc(tickets.createdAt))
 
-    res.json({ tickets: results })
+    // Get comment and attachment counts for all tickets
+    const ticketIds = results.map(t => t.id)
+
+    // Build counts map
+    const counts: Record<string, { commentCount: number; attachmentCount: number }> = {}
+
+    if (ticketIds.length > 0) {
+      // Get comment counts (exclude internal comments for client users)
+      const commentCounts = await db
+        .select({
+          ticketId: ticketComments.ticketId,
+          count: db.$count(ticketComments.id),
+        })
+        .from(ticketComments)
+        .where(
+          and(
+            ticketComments.ticketId ? or(...ticketIds.map(id => eq(ticketComments.ticketId, id))) : undefined,
+            isInternal ? undefined : eq(ticketComments.isInternal, false)
+          )
+        )
+        .groupBy(ticketComments.ticketId)
+
+      // Get attachment counts
+      const attachmentCounts = await db
+        .select({
+          ticketId: attachments.ticketId,
+          count: db.$count(attachments.id),
+        })
+        .from(attachments)
+        .where(
+          attachments.ticketId ? or(...ticketIds.map(id => eq(attachments.ticketId, id))) : undefined
+        )
+        .groupBy(attachments.ticketId)
+
+      // Build counts map
+      commentCounts.forEach(c => {
+        if (c.ticketId) {
+          counts[c.ticketId] = { commentCount: Number(c.count), attachmentCount: 0 }
+        }
+      })
+      attachmentCounts.forEach(a => {
+        if (a.ticketId) {
+          if (!counts[a.ticketId]) {
+            counts[a.ticketId] = { commentCount: 0, attachmentCount: 0 }
+          }
+          counts[a.ticketId].attachmentCount = Number(a.count)
+        }
+      })
+    }
+
+    // Merge counts into results
+    const ticketsWithCounts = results.map(t => ({
+      ...t,
+      commentCount: counts[t.id]?.commentCount || 0,
+      attachmentCount: counts[t.id]?.attachmentCount || 0,
+    }))
+
+    res.json({ tickets: ticketsWithCounts })
   } catch (error) {
     console.error('List tickets error:', error)
     res.status(500).json({ error: 'Internal server error' })

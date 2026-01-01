@@ -157,9 +157,15 @@ export default function Dashboard() {
                 <thead>
                   <tr className="border-b text-left text-xs font-semibold uppercase tracking-wider" style={{ borderColor: 'var(--border-primary)', color: 'var(--text-muted)' }}>
                     <th className="px-5 py-3">Ticket</th>
+                    <th className="px-5 py-3">Created By</th>
                     <th className="px-5 py-3">Status</th>
                     <th className="px-5 py-3">Priority</th>
-                    <th className="px-5 py-3">Created</th>
+                    <th className="px-5 py-3 text-center">
+                      <span className="material-symbols-outlined text-sm">chat</span>
+                    </th>
+                    <th className="px-5 py-3 text-center">
+                      <span className="material-symbols-outlined text-sm">attach_file</span>
+                    </th>
                     <th className="px-5 py-3">Updated</th>
                   </tr>
                 </thead>
@@ -197,14 +203,24 @@ export default function Dashboard() {
                         </div>
                       </td>
                       <td className="px-5 py-4">
+                        <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                          {(ticket as any).createdByName || 'Unknown'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
                         <StatusBadge status={ticket.status} />
                       </td>
                       <td className="px-5 py-4">
                         <PriorityPill priority={ticket.clientPriority} />
                       </td>
-                      <td className="px-5 py-4">
-                        <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                          {formatDate(ticket.createdAt)}
+                      <td className="px-5 py-4 text-center">
+                        <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700" style={{ color: 'var(--text-secondary)' }}>
+                          {(ticket as any).commentCount || 0}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 text-center">
+                        <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700" style={{ color: 'var(--text-secondary)' }}>
+                          {(ticket as any).attachmentCount || 0}
                         </span>
                       </td>
                       <td className="px-5 py-4">
@@ -247,10 +263,27 @@ export default function Dashboard() {
                     </div>
                     <StatusBadge status={ticket.status} />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <PriorityPill priority={ticket.clientPriority} />
+                  <div className="flex items-center gap-2 mt-1 mb-2">
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      {formatDate(ticket.createdAt)}
+                      by {(ticket as any).createdByName || 'Unknown'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <PriorityPill priority={ticket.clientPriority} />
+                      <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+                        <span className="flex items-center gap-1">
+                          <span className="material-symbols-outlined text-xs">chat</span>
+                          {(ticket as any).commentCount || 0}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="material-symbols-outlined text-xs">attach_file</span>
+                          {(ticket as any).attachmentCount || 0}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      {formatDate(ticket.updatedAt)}
                     </span>
                   </div>
                 </motion.div>
