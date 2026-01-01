@@ -71,11 +71,11 @@ export default function Dashboard() {
         className="mb-6"
       >
         <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-          Welcome back, {user?.name?.split(' ')[0]}
+          Team Dashboard
         </h1>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
           {stats.open > 0
-            ? `You have ${stats.open} open ticket${stats.open > 1 ? 's' : ''} requiring attention.`
+            ? `Your team has ${stats.open} open ticket${stats.open > 1 ? 's' : ''} requiring attention.`
             : 'All caught up! No open tickets at the moment.'
           }
         </p>

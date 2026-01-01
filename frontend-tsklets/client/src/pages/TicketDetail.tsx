@@ -7,6 +7,7 @@ import type { Ticket, Attachment, TicketComment, TicketWatcher, EscalationReason
 import { StatusBadge, PriorityPill } from '@tsklets/ui'
 import { formatDateTime } from '@tsklets/utils'
 import ImageModal from '../components/ImageModal'
+import TicketChangelog from '../components/TicketChangelog'
 
 interface CompanyUser {
   id: number
@@ -49,6 +50,9 @@ export default function TicketDetail() {
   // Add watcher form
   const [watcherEmail, setWatcherEmail] = useState('')
   const [selectedWatcherUserId, setSelectedWatcherUserId] = useState<number | null>(null)
+
+  // Attachment upload
+  const [uploading, setUploading] = useState(false)
 
   const isCompanyAdmin = user?.role === 'company_admin'
   const isPendingReview = ticket?.status === 'pending_internal_review'
@@ -327,6 +331,41 @@ export default function TicketDetail() {
     }
   }
 
+  // Handle attachment upload
+  const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i])
+      }
+
+      const res = await fetch(`/api/tickets/${id}/attachments`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to upload attachments')
+      }
+
+      const data = await res.json()
+      setAttachments([...attachments, ...data.attachments])
+      toast.success(`${files.length} file${files.length > 1 ? 's' : ''} uploaded`)
+      // Reset file input
+      e.target.value = ''
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to upload attachments')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div
@@ -528,6 +567,13 @@ export default function TicketDetail() {
                 </div>
               </form>
             </div>
+
+            {/* Changelog / Activity Log */}
+            <div className="rounded-xl shadow-card" style={{ backgroundColor: 'var(--bg-card)', borderWidth: '1px', borderColor: 'var(--border-primary)' }}>
+              <div className="p-6">
+                <TicketChangelog ticketId={ticket.id.toString()} />
+              </div>
+            </div>
           </div>
 
           {/* Sidebar */}
@@ -634,12 +680,15 @@ export default function TicketDetail() {
             </div>
 
             {/* Attachments */}
-            {attachments.length > 0 && (
-              <div className="rounded-xl shadow-card p-6" style={{ backgroundColor: 'var(--bg-card)', borderWidth: '1px', borderColor: 'var(--border-primary)' }}>
-                <h3 className="font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+            <div className="rounded-xl shadow-card p-6" style={{ backgroundColor: 'var(--bg-card)', borderWidth: '1px', borderColor: 'var(--border-primary)' }}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
                   Attachments ({attachments.length})
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
+              </div>
+
+              {attachments.length > 0 && (
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   {attachments.map((att) => (
                     <div key={att.id} className="group">
                       {/* Thumbnail */}
@@ -673,8 +722,33 @@ export default function TicketDetail() {
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* Upload Button */}
+              <label
+                className={`flex items-center justify-center gap-2 w-full px-4 py-3 rounded-lg border-2 border-dashed cursor-pointer transition-colors ${
+                  uploading
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:border-primary hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+                style={{ borderColor: 'var(--border-primary)', color: 'var(--text-secondary)' }}
+              >
+                <span className="material-symbols-outlined text-lg">
+                  {uploading ? 'hourglass_empty' : 'upload_file'}
+                </span>
+                <span className="text-sm font-medium">
+                  {uploading ? 'Uploading...' : 'Add Attachments'}
+                </span>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*,video/*"
+                  onChange={handleAttachmentUpload}
+                  disabled={uploading}
+                  className="hidden"
+                />
+              </label>
+            </div>
           </div>
         </div>
       </main>
