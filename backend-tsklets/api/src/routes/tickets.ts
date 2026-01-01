@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { db } from '../db/index.js'
-import { tickets, attachments, ticketComments, ticketLinks, clients, users, products, ticketWatchers } from '../db/schema.js'
+import { tickets, attachments, ticketComments, ticketLinks, clients, users, products, ticketWatchers, supportTicketTasks, devTasks } from '../db/schema.js'
 import { eq, and, desc, or } from 'drizzle-orm'
 import { authenticate, requireInternal, requireClientAdmin } from '../middleware/auth.js'
 import { upload } from '../middleware/upload.js'
@@ -379,6 +379,27 @@ ticketRoutes.get('/:id', async (req, res) => {
       })),
     ]
 
+    // Get linked dev tasks (via supportTicketTasks join table)
+    const linkedTaskRecords = await db.select({
+      taskId: supportTicketTasks.taskId,
+    }).from(supportTicketTasks).where(eq(supportTicketTasks.ticketId, ticket.id))
+
+    const linkedDevTasks: any[] = []
+    if (linkedTaskRecords.length > 0) {
+      for (const record of linkedTaskRecords) {
+        const [task] = await db.select({
+          id: devTasks.id,
+          issueKey: devTasks.issueKey,
+          title: devTasks.title,
+          type: devTasks.type,
+          status: devTasks.status,
+        }).from(devTasks).where(eq(devTasks.id, record.taskId)).limit(1)
+        if (task) {
+          linkedDevTasks.push(task)
+        }
+      }
+    }
+
     // Enrich ticket with related info
     const enrichedTicket = {
       ...ticket,
@@ -404,6 +425,7 @@ ticketRoutes.get('/:id', async (req, res) => {
       parent,
       children,
       links,
+      devTasks: linkedDevTasks,
     })
   } catch (error) {
     console.error('Get ticket error:', error)

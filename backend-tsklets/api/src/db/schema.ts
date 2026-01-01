@@ -71,6 +71,10 @@ export const products = pgTable('products', {
   code: text('code').notNull(), // e.g., 'TSKLTS', 'CSUP' - used for issue keys
   description: text('description'),
   nextIssueNum: integer('next_issue_num').default(1), // Legacy: shared sequence (deprecated)
+  // Default team for dev tasks (optional)
+  defaultImplementorId: integer('default_implementor_id').references(() => users.id),
+  defaultDeveloperId: integer('default_developer_id').references(() => users.id),
+  defaultTesterId: integer('default_tester_id').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow(),
 })
 

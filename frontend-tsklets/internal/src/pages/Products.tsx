@@ -2,11 +2,16 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import { useAuthStore } from '../store/auth'
+import ProductModal from '../components/ProductModal'
 
 interface Product {
   id: number
   name: string
+  code: string
   description: string | null
+  defaultImplementorId: number | null
+  defaultDeveloperId: number | null
+  defaultTesterId: number | null
   createdAt: string
 }
 
@@ -14,7 +19,6 @@ export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [viewMode, setViewMode] = useState<'card' | 'list'>(() => {
     return (localStorage.getItem('products-view-mode') as 'card' | 'list') || 'card'
@@ -25,11 +29,6 @@ export default function Products() {
     setViewMode(mode)
     localStorage.setItem('products-view-mode', mode)
   }
-
-  // Form state
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [error, setError] = useState('')
 
   const surfaceStyles = { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }
   const textPrimary = { color: 'var(--text-primary)' }
@@ -54,72 +53,23 @@ export default function Products() {
     }
   }
 
-  const resetForm = () => {
-    setName('')
-    setDescription('')
-    setError('')
-    setEditingProduct(null)
-  }
-
   const openAddModal = () => {
-    resetForm()
+    setEditingProduct(null)
     setShowModal(true)
   }
 
   const openEditModal = (product: Product) => {
     setEditingProduct(product)
-    setName(product.name)
-    setDescription(product.description || '')
     setShowModal(true)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setSaving(true)
+  const handleModalClose = () => {
+    setShowModal(false)
+    setEditingProduct(null)
+  }
 
-    try {
-      if (editingProduct) {
-        // Update existing product
-        const res = await fetch(`/api/products/${editingProduct.id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ name, description }),
-        })
-
-        if (!res.ok) {
-          const data = await res.json()
-          throw new Error(data.error || 'Failed to update product')
-        }
-      } else {
-        // Create new product
-        const res = await fetch('/api/products', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ name, description }),
-        })
-
-        if (!res.ok) {
-          const data = await res.json()
-          throw new Error(data.error || 'Failed to create product')
-        }
-      }
-
-      // Success
-      setShowModal(false)
-      resetForm()
-      fetchProducts()
-    } catch (err: any) {
-      setError(err.message)
-    } finally {
-      setSaving(false)
-    }
+  const handleModalSave = () => {
+    fetchProducts()
   }
 
   return (
@@ -265,93 +215,13 @@ export default function Products() {
         </div>
       </main>
 
-      {/* Modal */}
+      {/* Product Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="rounded-xl shadow-xl w-full max-w-md mx-4" style={surfaceStyles}>
-            <div className="p-6 border-b" style={surfaceStyles}>
-              <h3 className="text-lg font-bold" style={textPrimary}>
-                {editingProduct ? 'Edit Product' : 'Add New Product'}
-              </h3>
-              <p className="text-sm mt-1" style={textSecondary}>
-                {editingProduct ? 'Update product details' : 'Create a new product offering'}
-              </p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              {error && (
-                <div
-                  className="p-3 border rounded-lg text-sm"
-                  style={{
-                    backgroundColor: 'var(--error-bg)',
-                    borderColor: 'var(--error-text)',
-                    color: 'var(--error-text)',
-                  }}
-                >
-                  {error}
-                </div>
-              )}
-
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${name ? 'text-green-600' : 'text-red-500'}`}>
-                  Product Name *
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="input-field text-sm py-2"
-                  style={{
-                    color: 'var(--text-primary)',
-                    backgroundColor: 'var(--bg-card)',
-                    borderColor: 'var(--border-primary)',
-                  }}
-                  placeholder="e.g., HRM, Payroll, Attendance"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm mb-1" style={textSecondary}>Description</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="input-field text-sm py-2 resize-none"
-                  style={{
-                    color: 'var(--text-primary)',
-                    backgroundColor: 'var(--bg-card)',
-                    borderColor: 'var(--border-primary)',
-                  }}
-                  rows={3}
-                  placeholder="Brief description of the product"
-                />
-              </div>
-
-              {/* Actions */}
-              <div className="flex justify-end gap-3 pt-4 border-t" style={surfaceStyles}>
-                <button
-                  type="button"
-                  onClick={() => { setShowModal(false); resetForm() }}
-                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  style={{
-                    color: 'var(--text-secondary)',
-                    backgroundColor: 'var(--bg-card)',
-                    border: '1px solid var(--border-primary)',
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-primary hover:bg-blue-600 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Saving...' : (editingProduct ? 'Save Changes' : 'Create Product')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <ProductModal
+          product={editingProduct}
+          onClose={handleModalClose}
+          onSave={handleModalSave}
+        />
       )}
     </div>
   )

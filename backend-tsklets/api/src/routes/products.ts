@@ -48,10 +48,18 @@ productRoutes.post('/', requireInternal, async (req, res) => {
 productRoutes.patch('/:id', requireInternal, async (req, res) => {
   try {
     const { id } = req.params
-    const { name, description } = req.body
+    const { name, description, defaultImplementorId, defaultDeveloperId, defaultTesterId } = req.body
+
+    // Build update object with only provided fields
+    const updateData: Record<string, any> = {}
+    if (name !== undefined) updateData.name = name
+    if (description !== undefined) updateData.description = description
+    if (defaultImplementorId !== undefined) updateData.defaultImplementorId = defaultImplementorId
+    if (defaultDeveloperId !== undefined) updateData.defaultDeveloperId = defaultDeveloperId
+    if (defaultTesterId !== undefined) updateData.defaultTesterId = defaultTesterId
 
     const [product] = await db.update(products)
-      .set({ name, description })
+      .set(updateData)
       .where(eq(products.id, parseInt(id)))
       .returning()
 

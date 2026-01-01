@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
+import DevTaskDetailModal from '../components/DevTaskDetailModal'
+import TicketModal from '../components/TicketModal'
 import { useAuthStore } from '../store/auth'
 
 interface DevTask {
@@ -70,12 +71,13 @@ const roleTabConfig: Record<RoleFilter, { label: string; icon: string; descripti
 const formatDate = (date: string) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
 export default function DevTasks() {
-  const navigate = useNavigate()
   const { token, user } = useAuthStore()
   const [tasks, setTasks] = useState<DevTask[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState<number | null>(null)
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null)
+  const [selectedTicketIssueKey, setSelectedTicketIssueKey] = useState<string | null>(null)
 
   // Filters
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
@@ -473,9 +475,12 @@ export default function DevTasks() {
                       >
                         {/* Issue Key */}
                         <td className="px-6 py-3">
-                          <span className="font-mono text-sm font-semibold text-primary">
+                          <button
+                            onClick={() => setSelectedTaskId(task.id)}
+                            className="font-mono text-sm font-semibold text-primary hover:underline cursor-pointer"
+                          >
                             {task.issueKey || `#${task.id}`}
-                          </span>
+                          </button>
                         </td>
 
                         {/* Title */}
@@ -551,7 +556,7 @@ export default function DevTasks() {
                         <td className="px-4 py-3">
                           {task.supportTicket ? (
                             <button
-                              onClick={() => navigate(`/tickets/${task.supportTicketId}`)}
+                              onClick={() => setSelectedTicketIssueKey(task.supportTicket!.issueKey)}
                               className="text-xs font-mono font-medium text-primary hover:underline flex items-center gap-1"
                             >
                               <span className="material-symbols-outlined text-[14px]">confirmation_number</span>
@@ -577,6 +582,28 @@ export default function DevTasks() {
           </table>
         </div>
       </main>
+
+      {/* Dev Task Detail Modal */}
+      {selectedTaskId && (
+        <DevTaskDetailModal
+          taskId={selectedTaskId}
+          onClose={() => setSelectedTaskId(null)}
+          onStatusChange={() => {
+            fetchData() // Refresh the list when status changes
+          }}
+        />
+      )}
+
+      {/* Support Ticket Modal */}
+      {selectedTicketIssueKey && (
+        <TicketModal
+          issueKey={selectedTicketIssueKey}
+          onClose={() => setSelectedTicketIssueKey(null)}
+          onStatusChange={() => {
+            fetchData() // Refresh the list when ticket status changes
+          }}
+        />
+      )}
     </div>
   )
 }

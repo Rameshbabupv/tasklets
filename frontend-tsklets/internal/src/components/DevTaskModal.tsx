@@ -100,32 +100,45 @@ export default function DevTaskModal({ ticket, onClose, onSuccess }: DevTaskModa
   }, [])
 
   const loadInitialData = async () => {
-    // Fetch internal users
+    // Fetch internal users (systech.com users)
     try {
-      const res = await fetch('/api/users?internal=true', {
+      const res = await fetch('/api/users/internal', {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
-      setInternalUsers(data.users || data || [])
+      setInternalUsers(data || [])
     } catch (err) {
       console.error('Failed to fetch users', err)
     }
 
-    // Fetch modules and addons for the ticket's product
+    // Fetch modules, addons, and product defaults for the ticket's product
     if (ticket.productId) {
       try {
-        const [modulesRes, addonsRes] = await Promise.all([
+        const [modulesRes, addonsRes, productsRes] = await Promise.all([
           fetch(`/api/products/${ticket.productId}/modules`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
           fetch(`/api/products/${ticket.productId}/addons`, {
             headers: { Authorization: `Bearer ${token}` },
           }),
+          fetch('/api/products', {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         ])
         const modulesData = await modulesRes.json()
         const addonsData = await addonsRes.json()
+        const productsData = await productsRes.json()
+
         setModules(modulesData || [])
         setAddons(addonsData || [])
+
+        // Find the product and pre-fill role assignments from defaults
+        const product = productsData.find((p: any) => p.id === ticket.productId)
+        if (product) {
+          if (product.defaultImplementorId) setImplementorId(product.defaultImplementorId)
+          if (product.defaultDeveloperId) setDeveloperId(product.defaultDeveloperId)
+          if (product.defaultTesterId) setTesterId(product.defaultTesterId)
+        }
       } catch (err) {
         console.error('Failed to fetch product structure', err)
       }

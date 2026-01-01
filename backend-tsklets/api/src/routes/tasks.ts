@@ -644,3 +644,103 @@ taskRoutes.get('/all', requireInternal, async (req, res) => {
     res.status(500).json({ error: 'Internal server error' })
   }
 })
+
+// Get single task by ID (must be after /all, /my-tasks, etc. to avoid matching those as :id)
+taskRoutes.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const [task] = await db.select({
+      id: devTasks.id,
+      issueKey: devTasks.issueKey,
+      title: devTasks.title,
+      description: devTasks.description,
+      type: devTasks.type,
+      status: devTasks.status,
+      priority: devTasks.priority,
+      storyPoints: devTasks.storyPoints,
+      estimate: devTasks.estimate,
+      actualTime: devTasks.actualTime,
+      dueDate: devTasks.dueDate,
+      labels: devTasks.labels,
+      blockedReason: devTasks.blockedReason,
+      severity: devTasks.severity,
+      environment: devTasks.environment,
+      supportTicketId: devTasks.supportTicketId,
+      productId: devTasks.productId,
+      moduleId: devTasks.moduleId,
+      componentId: devTasks.componentId,
+      addonId: devTasks.addonId,
+      implementorId: devTasks.implementorId,
+      developerId: devTasks.developerId,
+      testerId: devTasks.testerId,
+      createdAt: devTasks.createdAt,
+      updatedAt: devTasks.updatedAt,
+    }).from(devTasks).where(eq(devTasks.id, parseInt(id))).limit(1)
+
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' })
+    }
+
+    // Fetch related info
+    const [product] = task.productId
+      ? await db.select({ name: products.name, code: products.code }).from(products).where(eq(products.id, task.productId)).limit(1)
+      : [null]
+
+    const [module] = task.moduleId
+      ? await db.select({ name: modules.name }).from(modules).where(eq(modules.id, task.moduleId)).limit(1)
+      : [null]
+
+    const [component] = task.componentId
+      ? await db.select({ name: components.name }).from(components).where(eq(components.id, task.componentId)).limit(1)
+      : [null]
+
+    const [addon] = task.addonId
+      ? await db.select({ name: addons.name }).from(addons).where(eq(addons.id, task.addonId)).limit(1)
+      : [null]
+
+    // Fetch assignees
+    const [implementor] = task.implementorId
+      ? await db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, task.implementorId)).limit(1)
+      : [null]
+
+    const [developer] = task.developerId
+      ? await db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, task.developerId)).limit(1)
+      : [null]
+
+    const [tester] = task.testerId
+      ? await db.select({ name: users.name, email: users.email }).from(users).where(eq(users.id, task.testerId)).limit(1)
+      : [null]
+
+    // Fetch source support ticket if linked
+    let supportTicket = null
+    if (task.supportTicketId) {
+      const [ticket] = await db.select({
+        id: tickets.id,
+        issueKey: tickets.issueKey,
+        title: tickets.title,
+        status: tickets.status,
+      }).from(tickets).where(eq(tickets.id, task.supportTicketId)).limit(1)
+      supportTicket = ticket || null
+    }
+
+    res.json({
+      ...task,
+      productName: product?.name || null,
+      productCode: product?.code || null,
+      moduleName: module?.name || null,
+      componentName: component?.name || null,
+      addonName: addon?.name || null,
+      implementorName: implementor?.name || null,
+      implementorEmail: implementor?.email || null,
+      developerName: developer?.name || null,
+      developerEmail: developer?.email || null,
+      testerName: tester?.name || null,
+      testerEmail: tester?.email || null,
+      supportTicket,
+    })
+  } catch (error) {
+    console.error('Get task error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})

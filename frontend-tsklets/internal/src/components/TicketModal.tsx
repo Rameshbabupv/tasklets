@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useAuthStore } from '../store/auth'
+import DevTaskDetailModal from './DevTaskDetailModal'
 
 interface Ticket {
   id: string
@@ -119,6 +120,14 @@ interface TicketLink {
   ticket: LinkedTicket | null
 }
 
+interface LinkedDevTask {
+  id: number
+  issueKey: string
+  title: string
+  type: string
+  status: string
+}
+
 interface DevTaskTicket {
   id: string
   issueKey: string
@@ -179,6 +188,8 @@ export default function TicketModal({ issueKey, onClose, onStatusChange, onCreat
   const [parent, setParent] = useState<LinkedTicket | null>(null)
   const [children, setChildren] = useState<LinkedTicket[]>([])
   const [links, setLinks] = useState<TicketLink[]>([])
+  const [devTasks, setDevTasks] = useState<LinkedDevTask[]>([])
+  const [selectedDevTaskId, setSelectedDevTaskId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'details' | 'comments' | 'attachments' | 'related'>('details')
   const [isClosing, setIsClosing] = useState(false)
@@ -221,6 +232,7 @@ export default function TicketModal({ issueKey, onClose, onStatusChange, onCreat
       setParent(data.parent || null)
       setChildren(data.children || [])
       setLinks(data.links || [])
+      setDevTasks(data.devTasks || [])
     } catch (err) {
       console.error('Failed to fetch ticket', err)
     } finally {
@@ -516,7 +528,7 @@ export default function TicketModal({ issueKey, onClose, onStatusChange, onCreat
             { key: 'details', label: 'Details', icon: 'description' },
             { key: 'comments', label: 'Comments', icon: 'chat', count: comments.length },
             { key: 'attachments', label: 'Attachments', icon: 'attach_file', count: attachments.length },
-            { key: 'related', label: 'Related', icon: 'link', count: children.length + links.length + (parent ? 1 : 0) },
+            { key: 'related', label: 'Related', icon: 'link', count: children.length + links.length + devTasks.length + (parent ? 1 : 0) },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -799,7 +811,55 @@ export default function TicketModal({ issueKey, onClose, onStatusChange, onCreat
                   </div>
                 )}
 
-                {!parent && children.length === 0 && links.length === 0 && (
+                {/* Dev Tasks */}
+                {devTasks.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold uppercase tracking-wide mb-3 flex items-center gap-2" style={{ color: 'var(--text-muted)' }}>
+                      <span className="material-symbols-outlined text-base">code</span>
+                      Dev Tasks ({devTasks.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {devTasks.map((task) => (
+                        <div
+                          key={task.id}
+                          className="flex items-center gap-3 p-3 rounded-xl border hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors cursor-pointer group"
+                          style={{ backgroundColor: 'var(--bg-tertiary)', borderColor: 'var(--border-primary)' }}
+                          onClick={() => setSelectedDevTaskId(task.id)}
+                        >
+                          <div className={`size-8 rounded-lg flex items-center justify-center shrink-0 ${
+                            task.type === 'bug' ? 'bg-red-100 dark:bg-red-900/30 text-red-500' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500'
+                          }`}>
+                            <span className="material-symbols-outlined text-lg">
+                              {task.type === 'bug' ? 'bug_report' : 'task_alt'}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 group-hover:underline">
+                                {task.issueKey}
+                              </span>
+                              <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded uppercase ${
+                                task.status === 'done' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' :
+                                task.status === 'in_progress' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' :
+                                'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                              }`}>
+                                {task.status.replace('_', ' ')}
+                              </span>
+                            </div>
+                            <p className="text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+                              {task.title}
+                            </p>
+                          </div>
+                          <span className="material-symbols-outlined text-lg opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'var(--text-muted)' }}>
+                            open_in_new
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {!parent && children.length === 0 && links.length === 0 && devTasks.length === 0 && (
                   <div className="text-center py-12" style={{ color: 'var(--text-muted)' }}>
                     <span className="material-symbols-outlined text-4xl mb-2">link_off</span>
                     <p>No related tickets</p>
@@ -1148,6 +1208,17 @@ export default function TicketModal({ issueKey, onClose, onStatusChange, onCreat
         .animate-slide-up { animation: slideUp 0.3s ease-out; }
         .animate-slide-down { animation: slideDown 0.2s ease-out forwards; }
       `}</style>
+
+      {/* Dev Task Detail Modal */}
+      {selectedDevTaskId && (
+        <DevTaskDetailModal
+          taskId={selectedDevTaskId}
+          onClose={() => setSelectedDevTaskId(null)}
+          onStatusChange={() => {
+            fetchTicket() // Refresh ticket data to update dev task status in list
+          }}
+        />
+      )}
     </div>
   )
 }
