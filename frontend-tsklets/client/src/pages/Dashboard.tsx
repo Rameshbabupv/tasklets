@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '../store/auth'
 import type { Ticket } from '@tsklets/types'
@@ -35,30 +34,6 @@ function StatCard({ icon, label, value, color, active, onClick }: {
       </div>
     </motion.div>
   )
-}
-
-// Get initials from name
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-}
-
-// Generate consistent color from string
-function stringToColor(str: string): string {
-  const colors = [
-    'bg-rose-500', 'bg-pink-500', 'bg-fuchsia-500', 'bg-purple-500',
-    'bg-violet-500', 'bg-indigo-500', 'bg-blue-500', 'bg-cyan-500',
-    'bg-teal-500', 'bg-emerald-500', 'bg-amber-500', 'bg-orange-500',
-  ]
-  let hash = 0
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return colors[Math.abs(hash) % colors.length]
 }
 
 type StatusFilter = 'all' | 'open' | 'in_progress' | 'resolved' | 'pending_internal_review'
@@ -146,232 +121,49 @@ export default function Dashboard() {
       </motion.div>
 
       {/* Tickets Table */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="rounded-2xl border shadow-sm overflow-hidden"
-        style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}
-      >
-        <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-primary)' }}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white shadow-md">
-              <span className="material-symbols-outlined">receipt_long</span>
-            </div>
-            <div>
-              <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>
-                {statusFilter === 'all' ? 'Recent Tickets' : `${statusFilter.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())} Tickets`}
-              </h2>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                {statusFilter === 'all' ? `${stats.total} total tickets` : `${filteredTickets.length} of ${stats.total} tickets`}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {statusFilter !== 'all' && (
-              <button
-                onClick={() => setStatusFilter('all')}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                <span className="material-symbols-outlined text-sm">close</span>
-                Clear filter
-              </button>
-            )}
-            <Link
-              to="/tickets"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-            >
-              View all
-              <span className="material-symbols-outlined text-lg">arrow_forward</span>
-            </Link>
-          </div>
+      <div className="border rounded-lg overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
+        <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border-primary)' }}>
+          <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>Recent Tickets</h2>
         </div>
 
         {loading ? (
-          <div className="p-12 flex flex-col items-center justify-center">
-            <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading tickets...</p>
-          </div>
+          <div className="p-8 text-center">Loading...</div>
         ) : tickets.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex items-center justify-center">
-              <span className="material-symbols-outlined text-4xl text-blue-600 dark:text-blue-400">confirmation_number</span>
-            </div>
-            <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--text-primary)' }}>No tickets yet</h3>
-            <p className="text-sm mb-6 max-w-sm mx-auto" style={{ color: 'var(--text-secondary)' }}>
-              Get started by creating your first support ticket. Our team is ready to help!
-            </p>
-            <motion.button
-              onClick={() => setShowNewTicketModal(true)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow"
-            >
-              <span className="material-symbols-outlined">add</span>
-              Create your first ticket
-            </motion.button>
-          </div>
+          <div className="p-8 text-center">No tickets yet</div>
         ) : (
-          <>
-            {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b text-left text-xs font-semibold uppercase tracking-wider" style={{ borderColor: 'var(--border-primary)', color: 'var(--text-muted)' }}>
-                    <th className="px-5 py-3">Ticket</th>
-                    <th className="px-5 py-3">Reporter</th>
-                    <th className="px-5 py-3">Status</th>
-                    <th className="px-5 py-3">Priority</th>
-                    <th className="px-5 py-3 text-center">
-                      <span className="material-symbols-outlined text-sm">chat</span>
-                    </th>
-                    <th className="px-5 py-3 text-center">
-                      <span className="material-symbols-outlined text-sm">attach_file</span>
-                    </th>
-                    <th className="px-5 py-3">Updated</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y" style={{ borderColor: 'var(--border-primary)' }}>
-                  {filteredTickets.slice(0, 8).map((ticket, index) => (
-                    <motion.tr
-                      key={ticket.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.3 + index * 0.03 }}
-                      className="group"
-                    >
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-2 h-2 rounded-full shrink-0 ${
-                            ticket.status === 'open' ? 'bg-amber-500' :
-                            ticket.status === 'in_progress' ? 'bg-blue-500' :
-                            ticket.status === 'resolved' ? 'bg-emerald-500' :
-                            ticket.status === 'pending_internal_review' ? 'bg-orange-500' :
-                            'bg-slate-400'
-                          }`} />
-                          <div>
-                            <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
-                              {ticket.title}
-                            </p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-xs font-mono text-blue-600 dark:text-blue-400">{ticket.issueKey}</span>
-                              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>•</span>
-                              <span className="text-xs capitalize" style={{ color: 'var(--text-muted)' }}>
-                                {ticket.type?.replace('_', ' ')}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        {(() => {
-                          const name = (ticket as any).reporterName || (ticket as any).createdByName || 'Unknown'
-                          return (
-                            <div className="flex items-center gap-2">
-                              <div className={`w-6 h-6 rounded-full ${stringToColor(name)} flex items-center justify-center text-white text-xs font-bold`}>
-                                {getInitials(name)}
-                              </div>
-                              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                                {name}
-                              </span>
-                            </div>
-                          )
-                        })()}
-                      </td>
-                      <td className="px-5 py-4">
-                        <StatusBadge status={ticket.status} />
-                      </td>
-                      <td className="px-5 py-4">
-                        <PriorityPill priority={ticket.clientPriority} />
-                      </td>
-                      <td className="px-5 py-4 text-center">
-                        <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700" style={{ color: 'var(--text-secondary)' }}>
-                          {(ticket as any).commentCount || 0}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-center">
-                        <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700" style={{ color: 'var(--text-secondary)' }}>
-                          {(ticket as any).attachmentCount || 0}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                          {formatDate(ticket.updatedAt)}
-                        </span>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile List */}
-            <div className="md:hidden divide-y" style={{ borderColor: 'var(--border-primary)' }}>
-              {filteredTickets.slice(0, 8).map((ticket, index) => (
-                <motion.div
-                  key={ticket.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + index * 0.03 }}
-                  className="p-4"
-                >
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className={`w-2 h-2 rounded-full shrink-0 ${
-                          ticket.status === 'open' ? 'bg-amber-500' :
-                          ticket.status === 'in_progress' ? 'bg-blue-500' :
-                          ticket.status === 'resolved' ? 'bg-emerald-500' :
-                          ticket.status === 'pending_internal_review' ? 'bg-orange-500' :
-                          'bg-slate-400'
-                        }`} />
-                        <span className="text-xs font-mono text-blue-600 dark:text-blue-400">{ticket.issueKey}</span>
-                      </div>
-                      <h3 className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
-                        {ticket.title}
-                      </h3>
-                    </div>
+          <table className="w-full">
+            <thead>
+              <tr className="border-b" style={{ borderColor: 'var(--border-primary)' }}>
+                <th className="px-4 py-2 text-left text-sm">Ticket</th>
+                <th className="px-4 py-2 text-left text-sm">Reporter</th>
+                <th className="px-4 py-2 text-left text-sm">Status</th>
+                <th className="px-4 py-2 text-left text-sm">Priority</th>
+                <th className="px-4 py-2 text-left text-sm">Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredTickets.slice(0, 8).map((ticket) => (
+                <tr key={ticket.id} className="border-b" style={{ borderColor: 'var(--border-primary)' }}>
+                  <td className="px-4 py-3">
+                    <div className="text-sm font-medium">{ticket.title}</div>
+                    <div className="text-xs text-gray-500">{ticket.issueKey}</div>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    {(ticket as any).reporterName || (ticket as any).createdByName || 'Unknown'}
+                  </td>
+                  <td className="px-4 py-3">
                     <StatusBadge status={ticket.status} />
-                  </div>
-                  <div className="flex items-center gap-2 mt-1 mb-2">
-                    {(() => {
-                      const name = (ticket as any).reporterName || (ticket as any).createdByName || 'Unknown'
-                      return (
-                        <>
-                          <div className={`w-5 h-5 rounded-full ${stringToColor(name)} flex items-center justify-center text-white text-[10px] font-bold`}>
-                            {getInitials(name)}
-                          </div>
-                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                            {name}
-                          </span>
-                        </>
-                      )
-                    })()}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <PriorityPill priority={ticket.clientPriority} />
-                      <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-                        <span className="flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">chat</span>
-                          {(ticket as any).commentCount || 0}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">attach_file</span>
-                          {(ticket as any).attachmentCount || 0}
-                        </span>
-                      </div>
-                    </div>
-                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      {formatDate(ticket.updatedAt)}
-                    </span>
-                  </div>
-                </motion.div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <PriorityPill priority={ticket.clientPriority} />
+                  </td>
+                  <td className="px-4 py-3 text-sm">{formatDate(ticket.updatedAt)}</td>
+                </tr>
               ))}
-            </div>
-          </>
+            </tbody>
+          </table>
         )}
-      </motion.div>
+      </div>
 
       {/* Modals */}
       <NewTicketModal isOpen={showNewTicketModal} onClose={() => setShowNewTicketModal(false)} />
