@@ -9,12 +9,23 @@ import NewTicketModal from '../components/NewTicketModal'
 import TicketDetailModal from '../components/TicketDetailModal'
 
 // Compact stat card component
-function StatCard({ icon, label, value, color }: { icon: string; label: string; value: number; color: string }) {
+function StatCard({ icon, label, value, color, active, onClick }: {
+  icon: string
+  label: string
+  value: number
+  color: string
+  active?: boolean
+  onClick?: () => void
+}) {
   return (
     <motion.div
       whileHover={{ scale: 1.02, y: -2 }}
-      className={`flex items-center gap-3 p-4 rounded-xl border backdrop-blur-sm ${color}`}
-      style={{ borderColor: 'var(--border-primary)' }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className={`flex items-center gap-3 p-4 rounded-xl border backdrop-blur-sm cursor-pointer transition-all ${color} ${
+        active ? 'ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-slate-900' : ''
+      }`}
+      style={{ borderColor: active ? 'transparent' : 'var(--border-primary)' }}
     >
       <div className="w-10 h-10 rounded-lg bg-white/50 dark:bg-black/20 flex items-center justify-center">
         <span className="material-symbols-outlined text-xl">{icon}</span>
@@ -27,12 +38,40 @@ function StatCard({ icon, label, value, color }: { icon: string; label: string; 
   )
 }
 
+// Get initials from name
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
+
+// Generate consistent color from string
+function stringToColor(str: string): string {
+  const colors = [
+    'bg-rose-500', 'bg-pink-500', 'bg-fuchsia-500', 'bg-purple-500',
+    'bg-violet-500', 'bg-indigo-500', 'bg-blue-500', 'bg-cyan-500',
+    'bg-teal-500', 'bg-emerald-500', 'bg-amber-500', 'bg-orange-500',
+  ]
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return colors[Math.abs(hash) % colors.length]
+}
+
+type StatusFilter = 'all' | 'open' | 'in_progress' | 'resolved' | 'pending_internal_review'
+
 export default function Dashboard() {
+  console.log('🚀 Dashboard component loaded - v2')
   const { user, token } = useAuthStore()
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
   const [showNewTicketModal, setShowNewTicketModal] = useState(false)
-  const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null)
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
   useEffect(() => {
     fetchTickets()
@@ -60,7 +99,17 @@ export default function Dashboard() {
     pendingReview: tickets.filter((t) => t.status === 'pending_internal_review').length,
   }
 
+  // Filter tickets based on selected status
+  const filteredTickets = statusFilter === 'all'
+    ? tickets
+    : tickets.filter(t => t.status === statusFilter)
+
   const isCompanyAdmin = user?.role === 'company_admin'
+
+  // Handle stat card click
+  const handleStatClick = (filter: StatusFilter) => {
+    setStatusFilter(prev => prev === filter ? 'all' : filter)
+  }
 
   return (
     <>
@@ -71,11 +120,11 @@ export default function Dashboard() {
         className="mb-6"
       >
         <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-          Welcome back, {user?.name?.split(' ')[0]}
+          Team Dashboard
         </h1>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
           {stats.open > 0
-            ? `You have ${stats.open} open ticket${stats.open > 1 ? 's' : ''} requiring attention.`
+            ? `Your team has ${stats.open} open ticket${stats.open > 1 ? 's' : ''} requiring attention.`
             : 'All caught up! No open tickets at the moment.'
           }
         </p>
@@ -88,13 +137,13 @@ export default function Dashboard() {
         transition={{ delay: 0.1 }}
         className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"
       >
-        <StatCard icon="folder_open" label="Open" value={stats.open} color="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400" />
-        <StatCard icon="pending" label="In Progress" value={stats.inProgress} color="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400" />
-        <StatCard icon="check_circle" label="Resolved" value={stats.resolved} color="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400" />
+        <StatCard icon="folder_open" label="Open" value={stats.open} color="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400" active={statusFilter === 'open'} onClick={() => handleStatClick('open')} />
+        <StatCard icon="pending" label="In Progress" value={stats.inProgress} color="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400" active={statusFilter === 'in_progress'} onClick={() => handleStatClick('in_progress')} />
+        <StatCard icon="check_circle" label="Resolved" value={stats.resolved} color="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400" active={statusFilter === 'resolved'} onClick={() => handleStatClick('resolved')} />
         {isCompanyAdmin ? (
-          <StatCard icon="inbox" label="Triage" value={stats.pendingReview} color="bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400" />
+          <StatCard icon="inbox" label="Triage" value={stats.pendingReview} color="bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400" active={statusFilter === 'pending_internal_review'} onClick={() => handleStatClick('pending_internal_review')} />
         ) : (
-          <StatCard icon="confirmation_number" label="Total" value={stats.total} color="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300" />
+          <StatCard icon="confirmation_number" label="Total" value={stats.total} color="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300" active={statusFilter === 'all'} onClick={() => handleStatClick('all')} />
         )}
       </motion.div>
 
@@ -112,17 +161,32 @@ export default function Dashboard() {
               <span className="material-symbols-outlined">receipt_long</span>
             </div>
             <div>
-              <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>Recent Tickets</h2>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{stats.total} total tickets</p>
+              <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>
+                {statusFilter === 'all' ? 'Recent Tickets' : `${statusFilter.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())} Tickets`}
+              </h2>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                {statusFilter === 'all' ? `${stats.total} total tickets` : `${filteredTickets.length} of ${stats.total} tickets`}
+              </p>
             </div>
           </div>
-          <Link
-            to="/tickets"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-          >
-            View all
-            <span className="material-symbols-outlined text-lg">arrow_forward</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            {statusFilter !== 'all' && (
+              <button
+                onClick={() => setStatusFilter('all')}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+                Clear filter
+              </button>
+            )}
+            <Link
+              to="/tickets"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+            >
+              View all
+              <span className="material-symbols-outlined text-lg">arrow_forward</span>
+            </Link>
+          </div>
         </div>
 
         {loading ? (
@@ -157,20 +221,29 @@ export default function Dashboard() {
                 <thead>
                   <tr className="border-b text-left text-xs font-semibold uppercase tracking-wider" style={{ borderColor: 'var(--border-primary)', color: 'var(--text-muted)' }}>
                     <th className="px-5 py-3">Ticket</th>
+                    <th className="px-5 py-3">Reporter</th>
                     <th className="px-5 py-3">Status</th>
                     <th className="px-5 py-3">Priority</th>
-                    <th className="px-5 py-3">Created</th>
+                    <th className="px-5 py-3 text-center">
+                      <span className="material-symbols-outlined text-sm">chat</span>
+                    </th>
+                    <th className="px-5 py-3 text-center">
+                      <span className="material-symbols-outlined text-sm">attach_file</span>
+                    </th>
                     <th className="px-5 py-3">Updated</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y" style={{ borderColor: 'var(--border-primary)' }}>
-                  {tickets.slice(0, 8).map((ticket, index) => (
+                  {filteredTickets.slice(0, 8).map((ticket, index) => (
                     <motion.tr
                       key={ticket.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.3 + index * 0.03 }}
-                      onClick={() => setSelectedTicketId(ticket.id)}
+                      onClick={() => {
+                        console.log('🎯 CLICKED TICKET:', ticket.id, ticket.issueKey)
+                        setSelectedTicketId(String(ticket.id))
+                      }}
                       className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors group"
                     >
                       <td className="px-5 py-4">
@@ -197,14 +270,34 @@ export default function Dashboard() {
                         </div>
                       </td>
                       <td className="px-5 py-4">
+                        {(() => {
+                          const name = (ticket as any).reporterName || (ticket as any).createdByName || 'Unknown'
+                          return (
+                            <div className="flex items-center gap-2">
+                              <div className={`w-6 h-6 rounded-full ${stringToColor(name)} flex items-center justify-center text-white text-xs font-bold`}>
+                                {getInitials(name)}
+                              </div>
+                              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                                {name}
+                              </span>
+                            </div>
+                          )
+                        })()}
+                      </td>
+                      <td className="px-5 py-4">
                         <StatusBadge status={ticket.status} />
                       </td>
                       <td className="px-5 py-4">
                         <PriorityPill priority={ticket.clientPriority} />
                       </td>
-                      <td className="px-5 py-4">
-                        <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                          {formatDate(ticket.createdAt)}
+                      <td className="px-5 py-4 text-center">
+                        <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700" style={{ color: 'var(--text-secondary)' }}>
+                          {(ticket as any).commentCount || 0}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 text-center">
+                        <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700" style={{ color: 'var(--text-secondary)' }}>
+                          {(ticket as any).attachmentCount || 0}
                         </span>
                       </td>
                       <td className="px-5 py-4">
@@ -220,13 +313,13 @@ export default function Dashboard() {
 
             {/* Mobile List */}
             <div className="md:hidden divide-y" style={{ borderColor: 'var(--border-primary)' }}>
-              {tickets.slice(0, 8).map((ticket, index) => (
+              {filteredTickets.slice(0, 8).map((ticket, index) => (
                 <motion.div
                   key={ticket.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 + index * 0.03 }}
-                  onClick={() => setSelectedTicketId(ticket.id)}
+                  onClick={() => setSelectedTicketId(String(ticket.id))}
                   className="p-4 active:bg-slate-50 dark:active:bg-slate-800 cursor-pointer"
                 >
                   <div className="flex items-start justify-between gap-3 mb-2">
@@ -247,10 +340,37 @@ export default function Dashboard() {
                     </div>
                     <StatusBadge status={ticket.status} />
                   </div>
+                  <div className="flex items-center gap-2 mt-1 mb-2">
+                    {(() => {
+                      const name = (ticket as any).reporterName || (ticket as any).createdByName || 'Unknown'
+                      return (
+                        <>
+                          <div className={`w-5 h-5 rounded-full ${stringToColor(name)} flex items-center justify-center text-white text-[10px] font-bold`}>
+                            {getInitials(name)}
+                          </div>
+                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                            {name}
+                          </span>
+                        </>
+                      )
+                    })()}
+                  </div>
                   <div className="flex items-center justify-between">
-                    <PriorityPill priority={ticket.clientPriority} />
+                    <div className="flex items-center gap-3">
+                      <PriorityPill priority={ticket.clientPriority} />
+                      <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
+                        <span className="flex items-center gap-1">
+                          <span className="material-symbols-outlined text-xs">chat</span>
+                          {(ticket as any).commentCount || 0}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="material-symbols-outlined text-xs">attach_file</span>
+                          {(ticket as any).attachmentCount || 0}
+                        </span>
+                      </div>
+                    </div>
                     <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      {formatDate(ticket.createdAt)}
+                      {formatDate(ticket.updatedAt)}
                     </span>
                   </div>
                 </motion.div>

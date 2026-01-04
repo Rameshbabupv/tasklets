@@ -272,6 +272,23 @@ export const ticketWatchers = pgTable('ticket_watchers', {
   createdAt: timestamp('created_at').defaultNow(),
 })
 
+// Ticket Audit Log (changelog/history)
+export const ticketAuditLog = pgTable('ticket_audit_log', {
+  id: serial('id').primaryKey(),
+  tenantId: integer('tenant_id').references(() => tenants.id).notNull(),
+  ticketId: text('ticket_id').references(() => tickets.id).notNull(),
+  changeType: text('change_type', {
+    enum: ['created', 'status_changed', 'priority_changed', 'severity_changed',
+           'comment_added', 'attachment_added', 'watcher_added', 'watcher_removed',
+           'escalated', 'assigned', 'pushed_to_systech', 'resolved', 'reopened']
+  }).notNull(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  oldValue: text('old_value'),
+  newValue: text('new_value'),
+  metadata: jsonb('metadata'), // Extra info: fileName, escalationReason, etc.
+  createdAt: timestamp('created_at').defaultNow(),
+})
+
 // ========================================
 // DEV ARTIFACTS (Internal to Tenant)
 // ========================================
@@ -1121,6 +1138,21 @@ export const ticketWatchersRelations = relations(ticketWatchers, ({ one }) => ({
   }),
   addedByUser: one(users, {
     fields: [ticketWatchers.addedBy],
+    references: [users.id],
+  }),
+}))
+
+export const ticketAuditLogRelations = relations(ticketAuditLog, ({ one }) => ({
+  tenant: one(tenants, {
+    fields: [ticketAuditLog.tenantId],
+    references: [tenants.id],
+  }),
+  ticket: one(tickets, {
+    fields: [ticketAuditLog.ticketId],
+    references: [tickets.id],
+  }),
+  user: one(users, {
+    fields: [ticketAuditLog.userId],
     references: [users.id],
   }),
 }))

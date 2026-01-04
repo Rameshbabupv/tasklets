@@ -1,12 +1,38 @@
 import { Router } from 'express'
 import { db } from '../db/index.js'
-import { tickets, attachments, ticketComments, ticketLinks, clients, users, products, ticketWatchers, supportTicketTasks, devTasks } from '../db/schema.js'
-import { eq, and, desc, or } from 'drizzle-orm'
+import { tickets, attachments, ticketComments, ticketLinks, clients, users, products, ticketWatchers, supportTicketTasks, devTasks, ticketAuditLog } from '../db/schema.js'
+import { eq, and, desc, or, count, sql, inArray } from 'drizzle-orm'
 import { authenticate, requireInternal, requireClientAdmin } from '../middleware/auth.js'
 import { upload } from '../middleware/upload.js'
 import { generateIssueKey } from '../utils/issueKey.js'
 
 export const ticketRoutes = Router()
+
+// Helper to log ticket changes to audit log
+async function logTicketChange(
+  tenantId: number,
+  ticketId: string,
+  changeType: string,
+  userId: number,
+  oldValue?: string | null,
+  newValue?: string | null,
+  metadata?: Record<string, any>
+) {
+  try {
+    await db.insert(ticketAuditLog).values({
+      tenantId,
+      ticketId,
+      changeType: changeType as any,
+      userId,
+      oldValue,
+      newValue,
+      metadata: metadata || null,
+    })
+  } catch (error) {
+    console.error('Failed to log ticket change:', error)
+    // Don't throw - audit logging should not break the main operation
+  }
+}
 
 // All ticket routes require authentication
 ticketRoutes.use(authenticate)
@@ -164,6 +190,9 @@ ticketRoutes.post('/', async (req, res) => {
       status: 'open',
     }).returning()
 
+    // Log ticket creation
+    await logTicketChange(tenantId, ticket.id, 'created', userId)
+
     res.status(201).json({ ticket })
   } catch (error: any) {
     console.error('Create ticket error:', error)
@@ -191,10 +220,10 @@ ticketRoutes.get('/', async (req, res) => {
         eq(tickets.clientId, clientId!)
       )
     } else {
-      // Regular client users only see their own tickets
+      // All client users see all tickets for their company (company-wide visibility)
       whereClause = and(
         eq(tickets.tenantId, tenantId),
-        eq(tickets.createdBy, userId)
+        eq(tickets.clientId, clientId!)
       )
     }
 
@@ -218,6 +247,7 @@ ticketRoutes.get('/', async (req, res) => {
         labels: tickets.labels,
         createdBy: tickets.createdBy,
         createdByName: users.name,
+        reporterId: tickets.reporterId,
         assignedTo: tickets.assignedTo,
         tenantId: tickets.tenantId,
         clientId: tickets.clientId,
@@ -231,7 +261,78 @@ ticketRoutes.get('/', async (req, res) => {
       .where(whereClause)
       .orderBy(desc(tickets.createdAt))
 
-    res.json({ tickets: results })
+    // Get comment and attachment counts for all tickets
+    const ticketIds = results.map(t => t.id)
+
+    // Build counts map
+    const counts: Record<string, { commentCount: number; attachmentCount: number }> = {}
+
+    if (ticketIds.length > 0) {
+      // Get comment counts (exclude internal comments for client users)
+      const commentCounts = await db
+        .select({
+          ticketId: ticketComments.ticketId,
+          count: count(ticketComments.id),
+        })
+        .from(ticketComments)
+        .where(
+          and(
+            inArray(ticketComments.ticketId, ticketIds),
+            isInternal ? undefined : eq(ticketComments.isInternal, false)
+          )
+        )
+        .groupBy(ticketComments.ticketId)
+
+      // Get attachment counts
+      const attachmentCounts = await db
+        .select({
+          ticketId: attachments.ticketId,
+          count: count(attachments.id),
+        })
+        .from(attachments)
+        .where(inArray(attachments.ticketId, ticketIds))
+        .groupBy(attachments.ticketId)
+
+      // Build counts map
+      commentCounts.forEach(c => {
+        if (c.ticketId) {
+          counts[c.ticketId] = { commentCount: Number(c.count), attachmentCount: 0 }
+        }
+      })
+      attachmentCounts.forEach(a => {
+        if (a.ticketId) {
+          if (!counts[a.ticketId]) {
+            counts[a.ticketId] = { commentCount: 0, attachmentCount: 0 }
+          }
+          counts[a.ticketId].attachmentCount = Number(a.count)
+        }
+      })
+    }
+
+    // Get reporter names for tickets where reporterId differs from createdBy
+    const reporterIds = [...new Set(results.filter(t => t.reporterId && t.reporterId !== t.createdBy).map(t => t.reporterId!))]
+    const reporterNames: Record<number, string> = {}
+
+    if (reporterIds.length > 0) {
+      const reporters = await db
+        .select({ id: users.id, name: users.name })
+        .from(users)
+        .where(inArray(users.id, reporterIds))
+
+      reporters.forEach(r => {
+        reporterNames[r.id] = r.name
+      })
+    }
+
+    // Merge counts and reporter names into results
+    const ticketsWithCounts = results.map(t => ({
+      ...t,
+      commentCount: counts[t.id]?.commentCount || 0,
+      attachmentCount: counts[t.id]?.attachmentCount || 0,
+      reporterName: t.reporterId === t.createdBy ? t.createdByName : (reporterNames[t.reporterId!] || t.createdByName),
+    }))
+
+    res.json({ tickets: ticketsWithCounts })
   } catch (error) {
     console.error('List tickets error:', error)
     res.status(500).json({ error: 'Internal server error' })
@@ -256,18 +357,10 @@ ticketRoutes.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Ticket not found' })
     }
 
-    // Access check
+    // Access check - all company users can view their company's tickets
     if (!isInternal) {
-      if (role === 'company_admin') {
-        // Client admin can see their client's tickets
-        if (ticket.clientId !== clientId) {
-          return res.status(403).json({ error: 'Forbidden' })
-        }
-      } else {
-        // Regular users can only see their own tickets
-        if (ticket.createdBy !== userId) {
-          return res.status(403).json({ error: 'Forbidden' })
-        }
+      if (ticket.clientId !== clientId) {
+        return res.status(403).json({ error: 'Forbidden' })
       }
     }
 
@@ -451,7 +544,7 @@ ticketRoutes.patch('/:id', async (req, res) => {
       resolution,
       resolutionNote,
     } = req.body
-    const { tenantId, isInternal } = req.user!
+    const { tenantId, isInternal, userId } = req.user!
 
     // Find by id or issueKey
     const [ticket] = await db.select().from(tickets)
@@ -499,6 +592,25 @@ ticketRoutes.patch('/:id', async (req, res) => {
       .where(eq(tickets.id, ticket.id))
       .returning()
 
+    // Log changes to audit log
+    if (status && status !== ticket.status) {
+      const changeType = status === 'resolved' ? 'resolved' :
+                        (ticket.status === 'resolved' && status !== 'resolved') ? 'reopened' :
+                        'status_changed'
+      await logTicketChange(tenantId, ticket.id, changeType, userId, ticket.status, status)
+    }
+    if (internalPriority !== undefined && internalPriority !== ticket.internalPriority) {
+      await logTicketChange(tenantId, ticket.id, 'priority_changed', userId,
+        ticket.internalPriority?.toString(), internalPriority?.toString())
+    }
+    if (internalSeverity !== undefined && internalSeverity !== ticket.internalSeverity) {
+      await logTicketChange(tenantId, ticket.id, 'severity_changed', userId,
+        ticket.internalSeverity?.toString(), internalSeverity?.toString())
+    }
+    if (assignedTo !== undefined && assignedTo !== ticket.assignedTo) {
+      await logTicketChange(tenantId, ticket.id, 'assigned', userId, null, assignedTo?.toString())
+    }
+
     res.json({ ticket: updated })
   } catch (error) {
     console.error('Update ticket error:', error)
@@ -533,6 +645,13 @@ ticketRoutes.post('/:id/comments', async (req, res) => {
       content,
       isInternal: isInternal ? isInternalNote : false,
     }).returning()
+
+    // Log comment added (only for non-internal comments)
+    if (!isInternalNote) {
+      await logTicketChange(tenantId, ticket.id, 'comment_added', userId, null, null, {
+        preview: content.slice(0, 100),
+      })
+    }
 
     res.status(201).json({ comment })
   } catch (error) {
@@ -582,6 +701,12 @@ ticketRoutes.post('/:id/attachments', upload.array('files', 5), async (req, res)
       }).returning()
 
       uploadedAttachments.push(attachment)
+
+      // Log attachment added
+      await logTicketChange(tenantId, ticket.id, 'attachment_added', userId, null, null, {
+        fileName: file.originalname,
+        fileSize: file.size,
+      })
     }
 
     res.status(201).json({ attachments: uploadedAttachments })
@@ -927,6 +1052,58 @@ ticketRoutes.post('/:id/reassign-to-internal', requireInternal, async (req, res)
     res.json({ ticket: updated })
   } catch (error) {
     console.error('Reassign to internal error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ========================================
+// TICKET CHANGELOG
+// ========================================
+
+// Get changelog/audit log for a ticket
+ticketRoutes.get('/:id/changelog', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { tenantId, clientId, isInternal } = req.user!
+
+    // Find ticket by id or issueKey
+    const [ticket] = await db.select().from(tickets)
+      .where(and(
+        or(eq(tickets.id, id), eq(tickets.issueKey, id)),
+        eq(tickets.tenantId, tenantId)
+      ))
+      .limit(1)
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' })
+    }
+
+    // Access check - all company users can view their company's tickets
+    if (!isInternal && ticket.clientId !== clientId) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+
+    // Get changelog entries with user info
+    const entries = await db.select({
+      id: ticketAuditLog.id,
+      ticketId: ticketAuditLog.ticketId,
+      changeType: ticketAuditLog.changeType,
+      userId: ticketAuditLog.userId,
+      userName: users.name,
+      userEmail: users.email,
+      oldValue: ticketAuditLog.oldValue,
+      newValue: ticketAuditLog.newValue,
+      metadata: ticketAuditLog.metadata,
+      createdAt: ticketAuditLog.createdAt,
+    })
+      .from(ticketAuditLog)
+      .leftJoin(users, eq(ticketAuditLog.userId, users.id))
+      .where(eq(ticketAuditLog.ticketId, ticket.id))
+      .orderBy(desc(ticketAuditLog.createdAt))
+
+    res.json({ changelog: entries })
+  } catch (error) {
+    console.error('Get ticket changelog error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
