@@ -65,11 +65,12 @@ function stringToColor(str: string): string {
 type StatusFilter = 'all' | 'open' | 'in_progress' | 'resolved' | 'pending_internal_review'
 
 export default function Dashboard() {
+  console.log('🚀 Dashboard component loaded - v2')
   const { user, token } = useAuthStore()
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
   const [showNewTicketModal, setShowNewTicketModal] = useState(false)
-  const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null)
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
   useEffect(() => {
@@ -239,7 +240,10 @@ export default function Dashboard() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.3 + index * 0.03 }}
-                      onClick={() => setSelectedTicketId(Number(ticket.id))}
+                      onClick={() => {
+                        console.log('🎯 CLICKED TICKET:', ticket.id, ticket.issueKey)
+                        setSelectedTicketId(String(ticket.id))
+                      }}
                       className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors group"
                     >
                       <td className="px-5 py-4">
@@ -315,7 +319,7 @@ export default function Dashboard() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 + index * 0.03 }}
-                  onClick={() => setSelectedTicketId(Number(ticket.id))}
+                  onClick={() => setSelectedTicketId(String(ticket.id))}
                   className="p-4 active:bg-slate-50 dark:active:bg-slate-800 cursor-pointer"
                 >
                   <div className="flex items-start justify-between gap-3 mb-2">

@@ -15,7 +15,7 @@ export default function InternalTriageQueue() {
 
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null)
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
 
   const isCompanyAdmin = user?.role === 'company_admin'
 
@@ -201,7 +201,7 @@ export default function InternalTriageQueue() {
                       >
                         <td className="py-3 px-4">
                           <button
-                            onClick={() => setSelectedTicketId(Number(ticket.id))}
+                            onClick={() => setSelectedTicketId(String(ticket.id))}
                             className="font-mono text-sm font-semibold text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 hover:underline transition-colors"
                           >
                             {ticket.issueKey || `#${ticket.id}`}

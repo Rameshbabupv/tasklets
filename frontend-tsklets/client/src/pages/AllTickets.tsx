@@ -54,7 +54,7 @@ export default function AllTickets() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
-  const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null)
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
 
   // Filter state from URL params
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all')
@@ -441,7 +441,7 @@ export default function AllTickets() {
                   transition={{ delay: index * 0.05 }}
                 >
                   <button
-                    onClick={() => setSelectedTicketId(Number(ticket.id))}
+                    onClick={() => setSelectedTicketId(String(ticket.id))}
                     className="block w-full text-left rounded-lg border p-4 hover:border-primary/50 hover:shadow-lg transition-all"
                     style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}
                   >
@@ -512,7 +512,7 @@ export default function AllTickets() {
                     >
                       <td className="py-3 px-4">
                         <button
-                          onClick={() => setSelectedTicketId(Number(ticket.id))}
+                          onClick={() => setSelectedTicketId(String(ticket.id))}
                           className="font-mono text-sm font-semibold text-primary hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors"
                         >
                           {ticket.issueKey || `#${ticket.id}`}

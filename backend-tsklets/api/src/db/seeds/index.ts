@@ -7,6 +7,7 @@
  *   npm run db:reset      - Drop all data and re-seed with demo data
  */
 
+import 'dotenv/config'
 import { seedTenant } from './02-tenant.js'
 import { seedLookups } from './01-lookups.js'
 import { seedClients } from './demo/01-clients.js'
