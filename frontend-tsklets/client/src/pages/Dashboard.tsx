@@ -1,44 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { useAuthStore } from '../store/auth'
+import { useTheme } from '../hooks/useTheme'
 import type { Ticket } from '@tsklets/types'
 import { StatusBadge, PriorityPill } from '@tsklets/ui'
 import { formatDate } from '@tsklets/utils'
-import NewTicketModal from '../components/NewTicketModal'
-import TicketDetailModal from '../components/TicketDetailModal'
 
-// Compact stat card component
-function StatCard({ icon, label, value, color, active, onClick }: {
-  icon: string
-  label: string
-  value: number
-  color: string
-  active?: boolean
-  onClick?: () => void
-}) {
-  return (
-    <motion.div
-      whileHover={{ scale: 1.02, y: -2 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={onClick}
-      className={`flex items-center gap-3 p-4 rounded-xl border backdrop-blur-sm cursor-pointer transition-all ${color} ${
-        active ? 'ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-slate-900' : ''
-      }`}
-      style={{ borderColor: active ? 'transparent' : 'var(--border-primary)' }}
-    >
-      <div className="w-10 h-10 rounded-lg bg-white/50 dark:bg-black/20 flex items-center justify-center">
-        <span className="material-symbols-outlined text-xl">{icon}</span>
-      </div>
-      <div>
-        <span className="text-2xl font-bold">{value}</span>
-        <p className="text-xs font-medium opacity-80 uppercase tracking-wide">{label}</p>
-      </div>
-    </motion.div>
-  )
-}
+type StatusFilter = 'all' | 'open' | 'in_progress' | 'resolved' | 'pending_internal_review'
 
-// Get initials from name
+// Helper function to get initials
 function getInitials(name: string): string {
   return name
     .split(' ')
@@ -51,9 +20,8 @@ function getInitials(name: string): string {
 // Generate consistent color from string
 function stringToColor(str: string): string {
   const colors = [
-    'bg-rose-500', 'bg-pink-500', 'bg-fuchsia-500', 'bg-purple-500',
-    'bg-violet-500', 'bg-indigo-500', 'bg-blue-500', 'bg-cyan-500',
-    'bg-teal-500', 'bg-emerald-500', 'bg-amber-500', 'bg-orange-500',
+    '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A',
+    '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2',
   ]
   let hash = 0
   for (let i = 0; i < str.length; i++) {
@@ -62,15 +30,11 @@ function stringToColor(str: string): string {
   return colors[Math.abs(hash) % colors.length]
 }
 
-type StatusFilter = 'all' | 'open' | 'in_progress' | 'resolved' | 'pending_internal_review'
-
 export default function Dashboard() {
-  console.log('🚀 Dashboard component loaded - v2')
   const { user, token } = useAuthStore()
+  const { theme } = useTheme()
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
-  const [showNewTicketModal, setShowNewTicketModal] = useState(false)
-  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
   useEffect(() => {
@@ -96,296 +60,790 @@ export default function Dashboard() {
     open: tickets.filter((t) => t.status === 'open').length,
     inProgress: tickets.filter((t) => t.status === 'in_progress').length,
     resolved: tickets.filter((t) => t.status === 'resolved').length,
-    pendingReview: tickets.filter((t) => t.status === 'pending_internal_review').length,
   }
 
-  // Filter tickets based on selected status
   const filteredTickets = statusFilter === 'all'
     ? tickets
     : tickets.filter(t => t.status === statusFilter)
 
-  const isCompanyAdmin = user?.role === 'company_admin'
-
-  // Handle stat card click
-  const handleStatClick = (filter: StatusFilter) => {
-    setStatusFilter(prev => prev === filter ? 'all' : filter)
-  }
+  const isDark = theme === 'dark'
 
   return (
-    <>
-      {/* Welcome Banner */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-6"
-      >
-        <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>
-          Team Dashboard
-        </h1>
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          {stats.open > 0
-            ? `Your team has ${stats.open} open ticket${stats.open > 1 ? 's' : ''} requiring attention.`
-            : 'All caught up! No open tickets at the moment.'
+    <div className="dashboard-container" data-theme={theme}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        .dashboard-container {
+          min-height: 100vh;
+          padding: 2rem 2rem 4rem;
+          position: relative;
+          transition: background-color 0.3s ease;
+        }
+
+        .dashboard-container[data-theme="light"] {
+          background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+        }
+
+        .dashboard-container[data-theme="dark"] {
+          background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+        }
+
+        .content-wrapper {
+          max-width: 1400px;
+          margin: 0 auto;
+          position: relative;
+          z-index: 1;
+        }
+
+        .hero-section {
+          margin-bottom: 2rem;
+          animation: fadeInUp 0.6s ease-out;
+        }
+
+        .hero-title {
+          font-family: 'Inter', sans-serif;
+          font-size: 1.5rem;
+          font-weight: 700;
+          margin-bottom: 0.25rem;
+          transition: color 0.3s ease;
+        }
+
+        [data-theme="light"] .hero-title {
+          color: #0F172A;
+        }
+
+        [data-theme="dark"] .hero-title {
+          color: #F1F5F9;
+        }
+
+        .hero-subtitle {
+          font-family: 'Inter', sans-serif;
+          font-size: 0.875rem;
+          font-weight: 400;
+          transition: color 0.3s ease;
+        }
+
+        [data-theme="light"] .hero-subtitle {
+          color: #64748B;
+        }
+
+        [data-theme="dark"] .hero-subtitle {
+          color: #94A3B8;
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 1rem;
+          margin-bottom: 2rem;
+        }
+
+        .stat-card {
+          border-radius: 12px;
+          padding: 1.25rem;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
+          overflow: hidden;
+          animation: fadeInUp 0.6s ease-out backwards;
+          border: 1px solid transparent;
+        }
+
+        [data-theme="light"] .stat-card {
+          background: rgba(255, 255, 255, 0.8);
+          border-color: rgba(148, 163, 184, 0.1);
+        }
+
+        [data-theme="dark"] .stat-card {
+          background: rgba(30, 41, 59, 0.6);
+          border-color: rgba(148, 163, 184, 0.05);
+        }
+
+        .stat-card:nth-child(1) { animation-delay: 0.05s; }
+        .stat-card:nth-child(2) { animation-delay: 0.1s; }
+        .stat-card:nth-child(3) { animation-delay: 0.15s; }
+        .stat-card:nth-child(4) { animation-delay: 0.2s; }
+
+        .stat-card:hover {
+          transform: translateY(-2px);
+        }
+
+        [data-theme="light"] .stat-card:hover {
+          box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+          border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        [data-theme="dark"] .stat-card:hover {
+          background: rgba(51, 65, 85, 0.6);
+          border-color: rgba(59, 130, 246, 0.4);
+        }
+
+        .stat-card.active {
+          border-width: 2px;
+        }
+
+        [data-theme="light"] .stat-card.active {
+          background: rgba(59, 130, 246, 0.05);
+          border-color: #3B82F6;
+          box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
+        }
+
+        [data-theme="dark"] .stat-card.active {
+          background: rgba(59, 130, 246, 0.1);
+          border-color: #3B82F6;
+          box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+        }
+
+        .stat-header {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 0.75rem;
+        }
+
+        .stat-icon {
+          width: 20px;
+          height: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.875rem;
+        }
+
+        .stat-label {
+          font-family: 'Inter', sans-serif;
+          font-size: 0.75rem;
+          font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          transition: color 0.3s ease;
+        }
+
+        [data-theme="light"] .stat-label {
+          color: #64748B;
+        }
+
+        [data-theme="dark"] .stat-label {
+          color: #94A3B8;
+        }
+
+        .stat-value {
+          font-family: 'Inter', sans-serif;
+          font-size: 2rem;
+          font-weight: 700;
+          line-height: 1;
+          margin-bottom: 0.25rem;
+          transition: color 0.3s ease;
+        }
+
+        [data-theme="light"] .stat-value {
+          color: #0F172A;
+        }
+
+        [data-theme="dark"] .stat-value {
+          color: #F1F5F9;
+        }
+
+        .stat-description {
+          font-family: 'Inter', sans-serif;
+          font-size: 0.75rem;
+          font-weight: 400;
+          transition: color 0.3s ease;
+        }
+
+        [data-theme="light"] .stat-description {
+          color: #94A3B8;
+        }
+
+        [data-theme="dark"] .stat-description {
+          color: #64748B;
+        }
+
+        .tickets-section {
+          animation: fadeInUp 0.6s ease-out 0.25s backwards;
+        }
+
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1rem;
+        }
+
+        .section-title-wrapper {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+        }
+
+        .section-icon {
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.125rem;
+          transition: background-color 0.3s ease;
+        }
+
+        [data-theme="light"] .section-icon {
+          background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+          color: white;
+        }
+
+        [data-theme="dark"] .section-icon {
+          background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+          color: white;
+        }
+
+        .section-title {
+          font-family: 'Inter', sans-serif;
+          font-size: 1rem;
+          font-weight: 600;
+          transition: color 0.3s ease;
+        }
+
+        [data-theme="light"] .section-title {
+          color: #0F172A;
+        }
+
+        [data-theme="dark"] .section-title {
+          color: #F1F5F9;
+        }
+
+        .section-subtitle {
+          font-family: 'Inter', sans-serif;
+          font-size: 0.75rem;
+          font-weight: 400;
+          transition: color 0.3s ease;
+        }
+
+        [data-theme="light"] .section-subtitle {
+          color: #94A3B8;
+        }
+
+        [data-theme="dark"] .section-subtitle {
+          color: #64748B;
+        }
+
+        .view-all-link {
+          font-family: 'Inter', sans-serif;
+          font-size: 0.875rem;
+          font-weight: 500;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.25rem;
+          padding: 0.5rem 0.75rem;
+          border-radius: 6px;
+          transition: all 0.2s ease;
+        }
+
+        [data-theme="light"] .view-all-link {
+          color: #3B82F6;
+          background: rgba(59, 130, 246, 0.05);
+        }
+
+        [data-theme="light"] .view-all-link:hover {
+          background: rgba(59, 130, 246, 0.1);
+        }
+
+        [data-theme="dark"] .view-all-link {
+          color: #60A5FA;
+          background: rgba(59, 130, 246, 0.1);
+        }
+
+        [data-theme="dark"] .view-all-link:hover {
+          background: rgba(59, 130, 246, 0.15);
+        }
+
+        .tickets-table-wrapper {
+          border-radius: 12px;
+          overflow: hidden;
+          transition: all 0.3s ease;
+          border: 1px solid transparent;
+        }
+
+        [data-theme="light"] .tickets-table-wrapper {
+          background: rgba(255, 255, 255, 0.9);
+          border-color: rgba(148, 163, 184, 0.1);
+          box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+        }
+
+        [data-theme="dark"] .tickets-table-wrapper {
+          background: rgba(30, 41, 59, 0.4);
+          border-color: rgba(148, 163, 184, 0.05);
+        }
+
+        .tickets-table {
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+        }
+
+        .tickets-table thead th {
+          font-family: 'Inter', sans-serif;
+          font-size: 0.6875rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          padding: 1rem 1.25rem;
+          text-align: left;
+          transition: all 0.3s ease;
+        }
+
+        [data-theme="light"] .tickets-table thead th {
+          color: #64748B;
+          background: rgba(248, 250, 252, 0.8);
+          border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        [data-theme="dark"] .tickets-table thead th {
+          color: #94A3B8;
+          background: rgba(15, 23, 42, 0.4);
+          border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .tickets-table tbody td {
+          font-family: 'Inter', sans-serif;
+          padding: 1rem 1.25rem;
+          transition: all 0.3s ease;
+        }
+
+        [data-theme="light"] .tickets-table tbody td {
+          border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+        }
+
+        [data-theme="dark"] .tickets-table tbody td {
+          border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+        }
+
+        .tickets-table tbody tr:last-child td {
+          border-bottom: none;
+        }
+
+        .ticket-title-wrapper {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+        }
+
+        .ticket-indicator {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+
+        .ticket-title {
+          font-weight: 500;
+          font-size: 0.875rem;
+          margin-bottom: 0.25rem;
+          transition: color 0.3s ease;
+        }
+
+        [data-theme="light"] .ticket-title {
+          color: #0F172A;
+        }
+
+        [data-theme="dark"] .ticket-title {
+          color: #F1F5F9;
+        }
+
+        .ticket-key {
+          font-family: 'JetBrains Mono', 'Courier New', monospace;
+          font-size: 0.75rem;
+          font-weight: 500;
+          transition: color 0.3s ease;
+        }
+
+        [data-theme="light"] .ticket-key {
+          color: #3B82F6;
+        }
+
+        [data-theme="dark"] .ticket-key {
+          color: #60A5FA;
+        }
+
+        .ticket-type {
+          font-size: 0.6875rem;
+          transition: color 0.3s ease;
+        }
+
+        [data-theme="light"] .ticket-type {
+          color: #94A3B8;
+        }
+
+        [data-theme="dark"] .ticket-type {
+          color: #64748B;
+        }
+
+        .reporter-wrapper {
+          display: flex;
+          align-items: center;
+          gap: 0.625rem;
+        }
+
+        .reporter-avatar {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.6875rem;
+          font-weight: 600;
+          color: white;
+          flex-shrink: 0;
+        }
+
+        .reporter-name {
+          font-size: 0.8125rem;
+          font-weight: 400;
+          transition: color 0.3s ease;
+        }
+
+        [data-theme="light"] .reporter-name {
+          color: #475569;
+        }
+
+        [data-theme="dark"] .reporter-name {
+          color: #CBD5E1;
+        }
+
+        .count-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 24px;
+          height: 24px;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 500;
+          transition: all 0.3s ease;
+        }
+
+        [data-theme="light"] .count-badge {
+          background: rgba(148, 163, 184, 0.1);
+          color: #64748B;
+        }
+
+        [data-theme="dark"] .count-badge {
+          background: rgba(51, 65, 85, 0.5);
+          color: #94A3B8;
+        }
+
+        .ticket-date {
+          font-size: 0.8125rem;
+          font-weight: 400;
+          transition: color 0.3s ease;
+        }
+
+        [data-theme="light"] .ticket-date {
+          color: #64748B;
+        }
+
+        [data-theme="dark"] .ticket-date {
+          color: #94A3B8;
+        }
+
+        .loading-state,
+        .empty-state {
+          padding: 3rem 2rem;
+          text-align: center;
+        }
+
+        .loading-spinner {
+          width: 36px;
+          height: 36px;
+          border: 3px solid transparent;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+          margin: 0 auto 1rem;
+        }
+
+        [data-theme="light"] .loading-spinner {
+          border-color: rgba(59, 130, 246, 0.1);
+          border-top-color: #3B82F6;
+        }
+
+        [data-theme="dark"] .loading-spinner {
+          border-color: rgba(59, 130, 246, 0.2);
+          border-top-color: #60A5FA;
+        }
+
+        .loading-text,
+        .empty-text {
+          font-family: 'Inter', sans-serif;
+          font-size: 0.875rem;
+          font-weight: 400;
+          transition: color 0.3s ease;
+        }
+
+        [data-theme="light"] .loading-text,
+        [data-theme="light"] .empty-text {
+          color: #64748B;
+        }
+
+        [data-theme="dark"] .loading-text,
+        [data-theme="dark"] .empty-text {
+          color: #94A3B8;
+        }
+
+        .empty-icon {
+          font-size: 3rem;
+          margin-bottom: 1rem;
+          opacity: 0.5;
+        }
+
+        .empty-title {
+          font-family: 'Inter', sans-serif;
+          font-size: 1.125rem;
+          font-weight: 600;
+          margin-bottom: 0.5rem;
+          transition: color 0.3s ease;
+        }
+
+        [data-theme="light"] .empty-title {
+          color: #0F172A;
+        }
+
+        [data-theme="dark"] .empty-title {
+          color: #F1F5F9;
+        }
+
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
           }
-        </p>
-      </motion.div>
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
 
-      {/* Stats Grid */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"
-      >
-        <StatCard icon="folder_open" label="Open" value={stats.open} color="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400" active={statusFilter === 'open'} onClick={() => handleStatClick('open')} />
-        <StatCard icon="pending" label="In Progress" value={stats.inProgress} color="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400" active={statusFilter === 'in_progress'} onClick={() => handleStatClick('in_progress')} />
-        <StatCard icon="check_circle" label="Resolved" value={stats.resolved} color="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400" active={statusFilter === 'resolved'} onClick={() => handleStatClick('resolved')} />
-        {isCompanyAdmin ? (
-          <StatCard icon="inbox" label="Triage" value={stats.pendingReview} color="bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400" active={statusFilter === 'pending_internal_review'} onClick={() => handleStatClick('pending_internal_review')} />
-        ) : (
-          <StatCard icon="confirmation_number" label="Total" value={stats.total} color="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300" active={statusFilter === 'all'} onClick={() => handleStatClick('all')} />
-        )}
-      </motion.div>
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
 
-      {/* Tickets Table */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="rounded-2xl border shadow-sm overflow-hidden"
-        style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}
-      >
-        <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--border-primary)' }}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white shadow-md">
-              <span className="material-symbols-outlined">receipt_long</span>
+        @media (max-width: 768px) {
+          .dashboard-container {
+            padding: 1.5rem 1rem 3rem;
+          }
+
+          .stats-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+          }
+
+          .stat-card {
+            padding: 1rem;
+          }
+
+          .stat-value {
+            font-size: 1.5rem;
+          }
+
+          .tickets-table-wrapper {
+            overflow-x: auto;
+          }
+
+          .tickets-table thead th,
+          .tickets-table tbody td {
+            padding: 0.875rem 1rem;
+            font-size: 0.8125rem;
+          }
+
+          .section-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.75rem;
+          }
+        }
+      `}</style>
+
+      <div className="content-wrapper">
+        {/* Hero Section */}
+        <div className="hero-section">
+          <h1 className="hero-title">Team Dashboard</h1>
+          <p className="hero-subtitle">
+            Your team has {stats.open} open ticket{stats.open !== 1 ? 's' : ''} requiring attention.
+          </p>
+        </div>
+
+        {/* Stats Grid */}
+        <div className="stats-grid">
+          <div
+            className={`stat-card ${statusFilter === 'open' ? 'active' : ''}`}
+            onClick={() => setStatusFilter(statusFilter === 'open' ? 'all' : 'open')}
+          >
+            <div className="stat-header">
+              <span className="stat-icon">📂</span>
+              <span className="stat-label">Open</span>
             </div>
-            <div>
-              <h2 className="font-bold" style={{ color: 'var(--text-primary)' }}>
-                {statusFilter === 'all' ? 'Recent Tickets' : `${statusFilter.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())} Tickets`}
-              </h2>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                {statusFilter === 'all' ? `${stats.total} total tickets` : `${filteredTickets.length} of ${stats.total} tickets`}
-              </p>
-            </div>
+            <div className="stat-value">{stats.open}</div>
+            <div className="stat-description">Awaiting response</div>
           </div>
-          <div className="flex items-center gap-2">
-            {statusFilter !== 'all' && (
-              <button
-                onClick={() => setStatusFilter('all')}
-                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                <span className="material-symbols-outlined text-sm">close</span>
-                Clear filter
-              </button>
-            )}
-            <Link
-              to="/tickets"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-            >
-              View all
-              <span className="material-symbols-outlined text-lg">arrow_forward</span>
-            </Link>
+
+          <div
+            className={`stat-card ${statusFilter === 'in_progress' ? 'active' : ''}`}
+            onClick={() => setStatusFilter(statusFilter === 'in_progress' ? 'all' : 'in_progress')}
+          >
+            <div className="stat-header">
+              <span className="stat-icon">⏳</span>
+              <span className="stat-label">In Progress</span>
+            </div>
+            <div className="stat-value">{stats.inProgress}</div>
+            <div className="stat-description">Being worked on</div>
+          </div>
+
+          <div
+            className={`stat-card ${statusFilter === 'resolved' ? 'active' : ''}`}
+            onClick={() => setStatusFilter(statusFilter === 'resolved' ? 'all' : 'resolved')}
+          >
+            <div className="stat-header">
+              <span className="stat-icon">✅</span>
+              <span className="stat-label">Resolved</span>
+            </div>
+            <div className="stat-value">{stats.resolved}</div>
+            <div className="stat-description">Completed tickets</div>
+          </div>
+
+          <div
+            className={`stat-card ${statusFilter === 'all' ? 'active' : ''}`}
+            onClick={() => setStatusFilter('all')}
+          >
+            <div className="stat-header">
+              <span className="stat-icon">🎫</span>
+              <span className="stat-label">Total</span>
+            </div>
+            <div className="stat-value">{stats.total}</div>
+            <div className="stat-description">All tickets</div>
           </div>
         </div>
 
-        {loading ? (
-          <div className="p-12 flex flex-col items-center justify-center">
-            <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Loading tickets...</p>
-          </div>
-        ) : tickets.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex items-center justify-center">
-              <span className="material-symbols-outlined text-4xl text-blue-600 dark:text-blue-400">confirmation_number</span>
+        {/* Tickets Section */}
+        <div className="tickets-section">
+          <div className="section-header">
+            <div className="section-title-wrapper">
+              <div className="section-icon">📋</div>
+              <div>
+                <h2 className="section-title">Recent Tickets</h2>
+                <p className="section-subtitle">
+                  {statusFilter === 'all'
+                    ? `${filteredTickets.length} tickets`
+                    : `${filteredTickets.length} ${statusFilter.replace('_', ' ')} tickets`}
+                </p>
+              </div>
             </div>
-            <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--text-primary)' }}>No tickets yet</h3>
-            <p className="text-sm mb-6 max-w-sm mx-auto" style={{ color: 'var(--text-secondary)' }}>
-              Get started by creating your first support ticket. Our team is ready to help!
-            </p>
-            <motion.button
-              onClick={() => setShowNewTicketModal(true)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-shadow"
-            >
-              <span className="material-symbols-outlined">add</span>
-              Create your first ticket
-            </motion.button>
+            <a href="/tickets" className="view-all-link">
+              View all →
+            </a>
           </div>
-        ) : (
-          <>
-            {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full">
+
+          <div className="tickets-table-wrapper">
+            {loading ? (
+              <div className="loading-state">
+                <div className="loading-spinner"></div>
+                <p className="loading-text">Loading your tickets...</p>
+              </div>
+            ) : filteredTickets.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">📭</div>
+                <h3 className="empty-title">No tickets found</h3>
+                <p className="empty-text">
+                  {statusFilter === 'all'
+                    ? 'You haven\'t created any tickets yet'
+                    : `No ${statusFilter.replace('_', ' ')} tickets`}
+                </p>
+              </div>
+            ) : (
+              <table className="tickets-table">
                 <thead>
-                  <tr className="border-b text-left text-xs font-semibold uppercase tracking-wider" style={{ borderColor: 'var(--border-primary)', color: 'var(--text-muted)' }}>
-                    <th className="px-5 py-3">Ticket</th>
-                    <th className="px-5 py-3">Reporter</th>
-                    <th className="px-5 py-3">Status</th>
-                    <th className="px-5 py-3">Priority</th>
-                    <th className="px-5 py-3 text-center">
-                      <span className="material-symbols-outlined text-sm">chat</span>
-                    </th>
-                    <th className="px-5 py-3 text-center">
-                      <span className="material-symbols-outlined text-sm">attach_file</span>
-                    </th>
-                    <th className="px-5 py-3">Updated</th>
+                  <tr>
+                    <th>TICKET</th>
+                    <th>REPORTER</th>
+                    <th>STATUS</th>
+                    <th>PRIORITY</th>
+                    <th style={{ textAlign: 'center' }}>💬</th>
+                    <th style={{ textAlign: 'center' }}>📎</th>
+                    <th>UPDATED</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y" style={{ borderColor: 'var(--border-primary)' }}>
-                  {filteredTickets.slice(0, 8).map((ticket, index) => (
-                    <motion.tr
-                      key={ticket.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.3 + index * 0.03 }}
-                      onClick={() => {
-                        console.log('🎯 CLICKED TICKET:', ticket.id, ticket.issueKey)
-                        setSelectedTicketId(String(ticket.id))
-                      }}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors group"
-                    >
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-2 h-2 rounded-full shrink-0 ${
-                            ticket.status === 'open' ? 'bg-amber-500' :
-                            ticket.status === 'in_progress' ? 'bg-blue-500' :
-                            ticket.status === 'resolved' ? 'bg-emerald-500' :
-                            ticket.status === 'pending_internal_review' ? 'bg-orange-500' :
-                            'bg-slate-400'
-                          }`} />
-                          <div>
-                            <p className="font-semibold text-sm group-hover:text-blue-600 transition-colors" style={{ color: 'var(--text-primary)' }}>
-                              {ticket.title}
-                            </p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-xs font-mono text-blue-600 dark:text-blue-400">{ticket.issueKey}</span>
-                              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>•</span>
-                              <span className="text-xs capitalize" style={{ color: 'var(--text-muted)' }}>
-                                {ticket.type?.replace('_', ' ')}
-                              </span>
+                <tbody>
+                  {filteredTickets.slice(0, 10).map((ticket) => {
+                    const reporterName = (ticket as any).reporterName || (ticket as any).createdByName || 'Unknown'
+                    return (
+                      <tr key={ticket.id}>
+                        <td>
+                          <div className="ticket-title-wrapper">
+                            <span
+                              className="ticket-indicator"
+                              style={{
+                                backgroundColor:
+                                  ticket.status === 'open' ? '#F59E0B' :
+                                  ticket.status === 'in_progress' ? '#3B82F6' :
+                                  ticket.status === 'resolved' ? '#10B981' :
+                                  '#6B7280'
+                              }}
+                            />
+                            <div>
+                              <div className="ticket-title">{ticket.title}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span className="ticket-key">{ticket.issueKey}</span>
+                                {ticket.type && (
+                                  <>
+                                    <span className="ticket-type">•</span>
+                                    <span className="ticket-type">
+                                      {ticket.type === 'feature_request' ? 'Feature Request' : 'Support'}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        {(() => {
-                          const name = (ticket as any).reporterName || (ticket as any).createdByName || 'Unknown'
-                          return (
-                            <div className="flex items-center gap-2">
-                              <div className={`w-6 h-6 rounded-full ${stringToColor(name)} flex items-center justify-center text-white text-xs font-bold`}>
-                                {getInitials(name)}
-                              </div>
-                              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                                {name}
-                              </span>
+                        </td>
+                        <td>
+                          <div className="reporter-wrapper">
+                            <div
+                              className="reporter-avatar"
+                              style={{ backgroundColor: stringToColor(reporterName) }}
+                            >
+                              {getInitials(reporterName)}
                             </div>
-                          )
-                        })()}
-                      </td>
-                      <td className="px-5 py-4">
-                        <StatusBadge status={ticket.status} />
-                      </td>
-                      <td className="px-5 py-4">
-                        <PriorityPill priority={ticket.clientPriority} />
-                      </td>
-                      <td className="px-5 py-4 text-center">
-                        <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700" style={{ color: 'var(--text-secondary)' }}>
-                          {(ticket as any).commentCount || 0}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-center">
-                        <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700" style={{ color: 'var(--text-secondary)' }}>
-                          {(ticket as any).attachmentCount || 0}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                          {formatDate(ticket.updatedAt)}
-                        </span>
-                      </td>
-                    </motion.tr>
-                  ))}
+                            <span className="reporter-name">{reporterName}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <StatusBadge status={ticket.status} />
+                        </td>
+                        <td>
+                          <PriorityPill priority={ticket.clientPriority} />
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <span className="count-badge">
+                            {(ticket as any).commentCount || 0}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <span className="count-badge">
+                            {(ticket as any).attachmentCount || 0}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="ticket-date">{formatDate(ticket.updatedAt)}</div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
-            </div>
-
-            {/* Mobile List */}
-            <div className="md:hidden divide-y" style={{ borderColor: 'var(--border-primary)' }}>
-              {filteredTickets.slice(0, 8).map((ticket, index) => (
-                <motion.div
-                  key={ticket.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + index * 0.03 }}
-                  onClick={() => setSelectedTicketId(String(ticket.id))}
-                  className="p-4 active:bg-slate-50 dark:active:bg-slate-800 cursor-pointer"
-                >
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className={`w-2 h-2 rounded-full shrink-0 ${
-                          ticket.status === 'open' ? 'bg-amber-500' :
-                          ticket.status === 'in_progress' ? 'bg-blue-500' :
-                          ticket.status === 'resolved' ? 'bg-emerald-500' :
-                          ticket.status === 'pending_internal_review' ? 'bg-orange-500' :
-                          'bg-slate-400'
-                        }`} />
-                        <span className="text-xs font-mono text-blue-600 dark:text-blue-400">{ticket.issueKey}</span>
-                      </div>
-                      <h3 className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
-                        {ticket.title}
-                      </h3>
-                    </div>
-                    <StatusBadge status={ticket.status} />
-                  </div>
-                  <div className="flex items-center gap-2 mt-1 mb-2">
-                    {(() => {
-                      const name = (ticket as any).reporterName || (ticket as any).createdByName || 'Unknown'
-                      return (
-                        <>
-                          <div className={`w-5 h-5 rounded-full ${stringToColor(name)} flex items-center justify-center text-white text-[10px] font-bold`}>
-                            {getInitials(name)}
-                          </div>
-                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                            {name}
-                          </span>
-                        </>
-                      )
-                    })()}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <PriorityPill priority={ticket.clientPriority} />
-                      <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-muted)' }}>
-                        <span className="flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">chat</span>
-                          {(ticket as any).commentCount || 0}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">attach_file</span>
-                          {(ticket as any).attachmentCount || 0}
-                        </span>
-                      </div>
-                    </div>
-                    <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      {formatDate(ticket.updatedAt)}
-                    </span>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </>
-        )}
-      </motion.div>
-
-      {/* Modals */}
-      <NewTicketModal isOpen={showNewTicketModal} onClose={() => setShowNewTicketModal(false)} />
-      <TicketDetailModal
-        ticketId={selectedTicketId}
-        onClose={() => setSelectedTicketId(null)}
-      />
-    </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
