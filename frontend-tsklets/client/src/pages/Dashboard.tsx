@@ -250,7 +250,7 @@ export default function Dashboard() {
                             'bg-slate-400'
                           }`} />
                           <div>
-                            <p className="font-semibold text-sm group-hover:text-blue-600 transition-colors" style={{ color: 'var(--text-primary)' }}>
+                            <p className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
                               {ticket.title}
                             </p>
                             <div className="flex items-center gap-2 mt-0.5">
