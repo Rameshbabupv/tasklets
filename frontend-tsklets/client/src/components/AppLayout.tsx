@@ -233,7 +233,6 @@ export default function AppLayout() {
 
         {/* Sidebar Footer */}
         <div className="mt-auto pt-4 space-y-3">
-          {/* Build Info */}
           {collapsed ? (
             <div className="flex justify-center">
               <div className="relative group/build">
@@ -243,9 +242,9 @@ export default function AppLayout() {
                   </span>
                 </div>
                 {/* Tooltip */}
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 dark:bg-slate-700 text-white text-[10px] rounded-lg opacity-0 group-hover/build:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 dark:bg-slate-700 text-white text-xs rounded-lg opacity-0 group-hover/build:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50">
                   <div className="font-semibold">v{__APP_VERSION__} • Build #{__BUILD_NUMBER__}</div>
-                  <div className="text-slate-300 mt-0.5">
+                  <div className="text-slate-300 mt-0.5 text-[10px]">
                     {new Date(__BUILD_DATE__).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} • {__GIT_HASH__}
                   </div>
                   <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900 dark:border-t-slate-700" />
@@ -254,23 +253,7 @@ export default function AppLayout() {
             </div>
           ) : (
             <>
-              <div className="px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-300">
-                    v{__APP_VERSION__} • Build #{__BUILD_NUMBER__}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between mt-0.5">
-                  <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                    {new Date(__BUILD_DATE__).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </span>
-                  <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
-                    {__GIT_HASH__}
-                  </span>
-                </div>
-              </div>
-
-              {/* Need Help Section */}
+              {/* Need Help Section - Now First */}
               <div className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border" style={{ borderColor: 'var(--border-primary)' }}>
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-lg">💡</span>
@@ -286,6 +269,23 @@ export default function AppLayout() {
                   View articles
                   <span className="material-symbols-outlined text-xs">arrow_forward</span>
                 </Link>
+              </div>
+
+              {/* Build Info - Now Last with Larger Font */}
+              <div className="px-3 py-2.5 rounded-lg bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    v{__APP_VERSION__} • Build #{__BUILD_NUMBER__}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-[11px] text-slate-400 dark:text-slate-500">
+                    {new Date(__BUILD_DATE__).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                  <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                    {__GIT_HASH__}
+                  </span>
+                </div>
               </div>
             </>
           )}
