@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { db } from '../db/index.js'
 import { tickets, attachments, ticketComments, ticketLinks, clients, users, products, ticketWatchers, supportTicketTasks, devTasks, ticketAuditLog } from '../db/schema.js'
 import { eq, and, desc, or, count, sql, inArray } from 'drizzle-orm'
-import { authenticate, requireInternal, requireClientAdmin } from '../middleware/auth.js'
+import { authenticate, requireInternal, requireClientAdmin, requireClientUser } from '../middleware/auth.js'
 import { upload } from '../middleware/upload.js'
 import { generateIssueKey, generateGlobalIssueKey } from '../utils/issueKey.js'
 
@@ -1118,6 +1118,174 @@ ticketRoutes.get('/:id/changelog', async (req, res) => {
     res.json({ changelog: entries })
   } catch (error) {
     console.error('Get ticket changelog error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// ========================================
+// TICKET ACTIONS (CLIENT PORTAL)
+// ========================================
+
+// Cancel ticket
+ticketRoutes.post('/:id/cancel', requireClientUser, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { reason } = req.body
+    const { userId, tenantId, clientId, role } = req.user!
+
+    // Validate reason is provided
+    if (!reason || reason.trim().length === 0) {
+      return res.status(400).json({ error: 'reason is required' })
+    }
+
+    // Find ticket by id or issueKey
+    const [ticket] = await db.select().from(tickets)
+      .where(and(
+        or(eq(tickets.id, id), eq(tickets.issueKey, id)),
+        eq(tickets.tenantId, tenantId)
+      ))
+      .limit(1)
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' })
+    }
+
+    // Verify ticket belongs to the user's client
+    if (ticket.clientId !== clientId) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+
+    // Permission check: ticket creator OR company_admin
+    const isCreator = ticket.createdBy === userId
+    const isAdmin = role === 'company_admin'
+
+    if (!isCreator && !isAdmin) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+
+    // Update ticket status to 'cancelled'
+    const [updated] = await db.update(tickets)
+      .set({
+        status: 'cancelled',
+        updatedAt: new Date(),
+      })
+      .where(eq(tickets.id, ticket.id))
+      .returning()
+
+    // Log to audit log
+    await logTicketChange(tenantId, ticket.id, 'cancelled', userId, ticket.status, 'cancelled', {
+      reason,
+    })
+
+    res.json({ ticket: updated })
+  } catch (error) {
+    console.error('Cancel ticket error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Reopen closed ticket
+ticketRoutes.post('/:id/reopen', requireClientUser, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { reason } = req.body
+    const { userId, tenantId, clientId } = req.user!
+
+    // Find ticket by id or issueKey
+    const [ticket] = await db.select().from(tickets)
+      .where(and(
+        or(eq(tickets.id, id), eq(tickets.issueKey, id)),
+        eq(tickets.tenantId, tenantId)
+      ))
+      .limit(1)
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' })
+    }
+
+    // Verify ticket belongs to the user's client
+    if (ticket.clientId !== clientId) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+
+    // Validate current status is 'closed'
+    if (ticket.status !== 'closed') {
+      return res.status(400).json({ error: 'Ticket must be in closed status to reopen' })
+    }
+
+    // Update ticket status to 'reopened'
+    const [updated] = await db.update(tickets)
+      .set({
+        status: 'reopened',
+        updatedAt: new Date(),
+      })
+      .where(eq(tickets.id, ticket.id))
+      .returning()
+
+    // Log to audit log
+    await logTicketChange(tenantId, ticket.id, 'reopened', userId, ticket.status, 'reopened', {
+      reason: reason || null,
+    })
+
+    res.json({ ticket: updated })
+  } catch (error) {
+    console.error('Reopen ticket error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// Close resolved ticket
+ticketRoutes.post('/:id/close', requireClientUser, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { userId, tenantId, clientId, role } = req.user!
+
+    // Find ticket by id or issueKey
+    const [ticket] = await db.select().from(tickets)
+      .where(and(
+        or(eq(tickets.id, id), eq(tickets.issueKey, id)),
+        eq(tickets.tenantId, tenantId)
+      ))
+      .limit(1)
+
+    if (!ticket) {
+      return res.status(404).json({ error: 'Ticket not found' })
+    }
+
+    // Verify ticket belongs to the user's client
+    if (ticket.clientId !== clientId) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+
+    // Permission check: ticket reporter OR company_admin
+    const isReporter = ticket.reporterId === userId
+    const isAdmin = role === 'company_admin'
+
+    if (!isReporter && !isAdmin) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+
+    // Validate current status is 'resolved' or 'reopened'
+    if (ticket.status !== 'resolved' && ticket.status !== 'reopened') {
+      return res.status(400).json({ error: 'Ticket must be in resolved or reopened status to close' })
+    }
+
+    // Update ticket status to 'closed' and set closedAt timestamp
+    const [updated] = await db.update(tickets)
+      .set({
+        status: 'closed',
+        closedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(tickets.id, ticket.id))
+      .returning()
+
+    // Log to audit log
+    await logTicketChange(tenantId, ticket.id, 'closed', userId, ticket.status, 'closed')
+
+    res.json({ ticket: updated })
+  } catch (error) {
+    console.error('Close ticket error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })

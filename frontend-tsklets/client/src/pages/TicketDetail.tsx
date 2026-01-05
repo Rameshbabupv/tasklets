@@ -8,6 +8,7 @@ import { StatusBadge, PriorityPill } from '@tsklets/ui'
 import { formatDateTime } from '@tsklets/utils'
 import ImageModal from '../components/ImageModal'
 import TicketChangelog from '../components/TicketChangelog'
+import TicketActions from '../components/TicketActions'
 
 interface CompanyUser {
   id: number
@@ -440,8 +441,17 @@ export default function TicketDetail() {
                 </div>
               </div>
               {ticket.description && (
-                <p className="whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{ticket.description}</p>
+                <p className="whitespace-pre-wrap mb-4" style={{ color: 'var(--text-secondary)' }}>{ticket.description}</p>
               )}
+
+              {/* Ticket Actions */}
+              <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--border-primary)' }}>
+                <TicketActions
+                  ticket={ticket}
+                  userRole={user?.role || 'user'}
+                  onActionComplete={fetchTicket}
+                />
+              </div>
 
               {/* Escalation Info */}
               {ticket.escalationReason && (

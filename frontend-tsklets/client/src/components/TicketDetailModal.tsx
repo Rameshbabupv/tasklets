@@ -5,6 +5,7 @@ import type { Ticket, Attachment, TicketComment } from '@tsklets/types'
 import { StatusBadge, PriorityPill } from '@tsklets/ui'
 import { formatDateTime } from '@tsklets/utils'
 import TicketChangelog from './TicketChangelog'
+import TicketActions from './TicketActions'
 
 interface TicketDetailModalProps {
   ticketId: string | null
@@ -38,7 +39,7 @@ function stringToColor(str: string): string {
 }
 
 export default function TicketDetailModal({ ticketId, onClose }: TicketDetailModalProps) {
-  const { token } = useAuthStore()
+  const { token, user } = useAuthStore()
   const [ticket, setTicket] = useState<Ticket | null>(null)
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const [comments, setComments] = useState<TicketComment[]>([])
@@ -224,12 +225,21 @@ export default function TicketDetailModal({ ticketId, onClose }: TicketDetailMod
                         </div>
 
                         {ticket.description && (
-                          <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4">
+                          <div className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-4 mb-4">
                             <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
                               {ticket.description}
                             </p>
                           </div>
                         )}
+
+                        {/* Ticket Actions */}
+                        <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                          <TicketActions
+                            ticket={ticket}
+                            userRole={user?.role || 'user'}
+                            onActionComplete={fetchTicket}
+                          />
+                        </div>
                       </div>
 
                       {/* Attachments */}
