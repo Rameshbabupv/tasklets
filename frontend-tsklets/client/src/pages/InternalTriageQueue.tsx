@@ -1,17 +1,15 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { toast, Toaster } from 'sonner'
 import { useAuthStore } from '../store/auth'
 import { StatusBadge, PriorityPill } from '@tsklets/ui'
 import { formatDate } from '@tsklets/utils'
-import ThemeToggle from '../components/ThemeToggle'
 import TicketDetailModal from '../components/TicketDetailModal'
 import type { Ticket } from '@tsklets/types'
 
 export default function InternalTriageQueue() {
-  const navigate = useNavigate()
-  const { token, user, logout } = useAuthStore()
+  const { token, user } = useAuthStore()
 
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
@@ -59,49 +57,6 @@ export default function InternalTriageQueue() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      {/* Header */}
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="bg-gradient-to-r from-white to-orange-50/30 dark:from-slate-800 dark:to-orange-900/30 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <button onClick={() => navigate('/')} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-lg">
-                  <span className="material-symbols-outlined text-xl">assignment</span>
-                </div>
-                <div>
-                  <span className="font-bold bg-gradient-to-r from-orange-500 to-amber-600 bg-clip-text text-transparent">Internal Triage</span>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Pending Review</p>
-                </div>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2 sm:gap-4">
-              <ThemeToggle />
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="text-right hidden md:block">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{user?.name}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{user?.role?.replace('_', ' ')}</p>
-                </div>
-                <motion.button
-                  onClick={logout}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="text-slate-400 hover:text-primary transition-colors p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg"
-                  aria-label="Logout"
-                >
-                  <span className="material-symbols-outlined">logout</span>
-                </motion.button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.header>
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Page Header */}
