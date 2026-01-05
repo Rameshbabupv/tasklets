@@ -182,6 +182,11 @@ ticketRoutes.post('/', async (req, res) => {
       id = generated.id
     }
 
+    // Determine initial status based on user type
+    // Client portal tickets start at 'pending_internal_review' for triage
+    // Internal tickets start at 'open'
+    const initialStatus = isInternal ? 'open' : 'pending_internal_review'
+
     const [ticket] = await db.insert(tickets).values({
       id,
       issueKey,
@@ -201,7 +206,7 @@ ticketRoutes.post('/', async (req, res) => {
       reporterId: finalReporterId, // The actual reporter (could be different for internal users)
       tenantId,
       clientId: finalClientId,
-      status: 'open',
+      status: initialStatus,
     }).returning()
 
     // Log ticket creation
