@@ -413,8 +413,9 @@ export default function TicketChangelog({ ticketId, className = '' }: TicketChan
   }
 
   // Filter entries
+  // By default (filter === 'all'), exclude comments to show ticket workflow
   const filteredEntries = filter === 'all'
-    ? entries
+    ? entries.filter(e => e.changeType !== 'comment_added')
     : entries.filter(e => e.changeType === filter)
 
   // Get unique change types for filter
@@ -482,7 +483,7 @@ export default function TicketChangelog({ ticketId, className = '' }: TicketChan
               onChange={(e) => setFilter(e.target.value as ChangeType | 'all')}
               className="appearance-none pl-4 pr-10 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer"
             >
-              <option value="all">All Activity</option>
+              <option value="all">✓ All Activity</option>
               {availableTypes.map((type) => (
                 <option key={type} value={type}>
                   {changeConfig[type].label}
