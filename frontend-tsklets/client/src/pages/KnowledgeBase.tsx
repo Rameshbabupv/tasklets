@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useAuthStore } from '../store/auth'
-import ThemeToggle from '../components/ThemeToggle'
 
 // Category data
 const categories = [
@@ -127,7 +125,6 @@ const faqs = [
 ]
 
 export default function KnowledgeBase() {
-  const { user, logout } = useAuthStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
@@ -140,45 +137,6 @@ export default function KnowledgeBase() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      {/* Header */}
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-white to-purple-50/30 dark:from-slate-800 dark:to-purple-900/30 border-b border-slate-200 dark:border-slate-700"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 text-white shadow-lg">
-                <span className="material-symbols-outlined text-xl">support_agent</span>
-              </div>
-              <div>
-                <span className="font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                  Support Desk
-                </span>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Knowledge Base</p>
-              </div>
-            </Link>
-
-            <div className="flex items-center gap-4">
-              <ThemeToggle />
-              <div className="flex items-center gap-3">
-                <div className="text-right hidden md:block">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{user?.name}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{user?.role}</p>
-                </div>
-                <button
-                  onClick={() => logout()}
-                  className="text-slate-400 hover:text-primary transition-colors p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg"
-                >
-                  <span className="material-symbols-outlined">logout</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.header>
-
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         {/* Background Pattern */}

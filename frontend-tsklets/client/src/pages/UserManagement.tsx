@@ -106,25 +106,6 @@ export default function UserManagement() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      {/* Header */}
-      <header className="bg-gradient-to-r from-white to-purple-50/30 dark:from-slate-800 dark:to-purple-900/30 border-b border-slate-200 dark:border-slate-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 text-white shadow-lg">
-                  <span className="material-symbols-outlined text-xl">support_agent</span>
-                </div>
-                <div>
-                  <span className="font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Support Desk</span>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Client Portal</p>
-                </div>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Main */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-6">
