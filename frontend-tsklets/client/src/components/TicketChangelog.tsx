@@ -387,7 +387,7 @@ export default function TicketChangelog({ ticketId, className = '' }: TicketChan
   const [entries, setEntries] = useState<ChangelogEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [filter, setFilter] = useState<ChangeType | 'all'>('all')
+  const [hideComments, setHideComments] = useState(true)
 
   useEffect(() => {
     fetchChangelog()
@@ -412,14 +412,12 @@ export default function TicketChangelog({ ticketId, className = '' }: TicketChan
     }
   }
 
-  // Filter entries
-  // By default (filter === 'all'), exclude comments to show ticket workflow
-  const filteredEntries = filter === 'all'
+  // Filter entries based on hideComments checkbox
+  const filteredEntries = hideComments
     ? entries.filter(e => e.changeType !== 'comment_added')
-    : entries.filter(e => e.changeType === filter)
+    : entries
 
-  // Get unique change types for filter
-  const availableTypes = Array.from(new Set(entries.map(e => e.changeType)))
+  const commentCount = entries.filter(e => e.changeType === 'comment_added').length
 
   if (loading) {
     return (
@@ -460,7 +458,7 @@ export default function TicketChangelog({ ticketId, className = '' }: TicketChan
 
   return (
     <div className={className}>
-      {/* Header with filter */}
+      {/* Header with checkbox filter */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800">
@@ -470,30 +468,24 @@ export default function TicketChangelog({ ticketId, className = '' }: TicketChan
             <h3 className="font-bold text-slate-900 dark:text-slate-100">Activity Log</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {filteredEntries.length} {filteredEntries.length === 1 ? 'entry' : 'entries'}
-              {filter !== 'all' && ` (filtered)`}
+              {hideComments && commentCount > 0 && ` • ${commentCount} comment${commentCount > 1 ? 's' : ''} hidden`}
             </p>
           </div>
         </div>
 
-        {/* Filter dropdown */}
-        {availableTypes.length > 1 && (
-          <div className="relative">
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value as ChangeType | 'all')}
-              className="appearance-none pl-4 pr-10 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-medium text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer"
-            >
-              <option value="all">✓ All Activity</option>
-              {availableTypes.map((type) => (
-                <option key={type} value={type}>
-                  {changeConfig[type].label}
-                </option>
-              ))}
-            </select>
-            <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-lg">
-              expand_more
+        {/* Hide comments checkbox */}
+        {commentCount > 0 && (
+          <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+            <input
+              type="checkbox"
+              checked={hideComments}
+              onChange={(e) => setHideComments(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-2 focus:ring-blue-500/50 cursor-pointer"
+            />
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300 select-none">
+              Hide comments
             </span>
-          </div>
+          </label>
         )}
       </div>
 
