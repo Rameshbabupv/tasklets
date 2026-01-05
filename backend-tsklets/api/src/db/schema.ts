@@ -183,7 +183,7 @@ export const tickets = pgTable('tickets', {
   }).default('support').notNull(),
 
   status: text('status', {
-    enum: ['pending_internal_review', 'open', 'in_progress', 'waiting_for_customer', 'rebuttal', 'resolved', 'closed', 'cancelled']
+    enum: ['pending_internal_review', 'open', 'in_progress', 'waiting_for_customer', 'rebuttal', 'resolved', 'closed', 'reopened', 'cancelled']
   }).default('pending_internal_review'),
 
   // Priority & Severity (client-facing and internal)

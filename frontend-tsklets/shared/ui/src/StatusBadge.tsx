@@ -42,6 +42,10 @@ const statusConfig: Record<string, { label: string; className: string }> = {
     label: 'Closed',
     className: 'bg-slate-100 text-slate-600 dark:bg-slate-500/20 dark:text-slate-300',
   },
+  reopened: {
+    label: 'Reopened',
+    className: 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300',
+  },
   cancelled: {
     label: 'Cancelled',
     className: 'bg-slate-100 text-slate-500 dark:bg-slate-600/20 dark:text-slate-400',

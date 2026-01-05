@@ -85,7 +85,7 @@ export interface Ticket {
   updatedAt: string
 }
 
-export type TicketStatus = 'pending_internal_review' | 'open' | 'in_progress' | 'waiting_for_customer' | 'rebuttal' | 'resolved' | 'closed' | 'cancelled'
+export type TicketStatus = 'pending_internal_review' | 'open' | 'in_progress' | 'waiting_for_customer' | 'rebuttal' | 'resolved' | 'closed' | 'reopened' | 'cancelled'
 
 export type EscalationReason = 'executive_request' | 'production_down' | 'compliance' | 'customer_impact' | 'other'
 
