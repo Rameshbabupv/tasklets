@@ -226,25 +226,30 @@ ticketRoutes.post('/', async (req, res) => {
 ticketRoutes.get('/', async (req, res) => {
   try {
     const { tenantId, clientId, isInternal, userId, role } = req.user!
+    const { status: statusFilter } = req.query
 
-    let whereClause
+    let whereConditions = []
 
+    // Base tenant filtering
     if (isInternal) {
       // Internal users see all tickets in their tenant
-      whereClause = eq(tickets.tenantId, tenantId)
+      whereConditions.push(eq(tickets.tenantId, tenantId))
     } else if (role === 'company_admin') {
       // Client admin sees all tickets for their client
-      whereClause = and(
-        eq(tickets.tenantId, tenantId),
-        eq(tickets.clientId, clientId!)
-      )
+      whereConditions.push(eq(tickets.tenantId, tenantId))
+      whereConditions.push(eq(tickets.clientId, clientId!))
     } else {
       // All client users see all tickets for their company (company-wide visibility)
-      whereClause = and(
-        eq(tickets.tenantId, tenantId),
-        eq(tickets.clientId, clientId!)
-      )
+      whereConditions.push(eq(tickets.tenantId, tenantId))
+      whereConditions.push(eq(tickets.clientId, clientId!))
     }
+
+    // Add status filter if provided
+    if (statusFilter && typeof statusFilter === 'string') {
+      whereConditions.push(eq(tickets.status, statusFilter))
+    }
+
+    const whereClause = whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0]
 
     // Join with users and products
     const results = await db
