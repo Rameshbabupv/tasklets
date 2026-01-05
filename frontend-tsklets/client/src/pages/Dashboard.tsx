@@ -125,7 +125,7 @@ export default function Dashboard() {
           Team Dashboard
         </h1>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          {isCompanyAdmin && stats.pendingReview > 0
+          {stats.pendingReview > 0
             ? `${stats.pendingReview} ticket${stats.pendingReview > 1 ? 's' : ''} pending review • ${stats.totalActive} total active`
             : stats.totalActive > 0
             ? `Your team has ${stats.totalActive} active ticket${stats.totalActive > 1 ? 's' : ''}.`
@@ -139,19 +139,15 @@ export default function Dashboard() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6"
+        className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-6"
       >
-        {/* Show Pending Review first for company admin */}
-        {isCompanyAdmin && (
-          <StatCard icon="inbox" label="Pending Review" value={stats.pendingReview} color="bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400" active={statusFilter === 'pending_internal_review'} onClick={() => handleStatClick('pending_internal_review')} />
-        )}
+        {/* All users see the same metrics */}
+        <StatCard icon="inbox" label="Pending Review" value={stats.pendingReview} color="bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400" active={statusFilter === 'pending_internal_review'} onClick={() => handleStatClick('pending_internal_review')} />
         <StatCard icon="folder_open" label="Open" value={stats.open} color="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400" active={statusFilter === 'open'} onClick={() => handleStatClick('open')} />
         <StatCard icon="pending" label="In Progress" value={stats.inProgress} color="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400" active={statusFilter === 'in_progress'} onClick={() => handleStatClick('in_progress')} />
         <StatCard icon="check_circle" label="Resolved" value={stats.resolved} color="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400" active={statusFilter === 'resolved'} onClick={() => handleStatClick('resolved')} />
         <StatCard icon="task_alt" label="Closed" value={stats.closed} color="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400" active={statusFilter === 'closed'} onClick={() => handleStatClick('closed')} />
-        {!isCompanyAdmin && (
-          <StatCard icon="confirmation_number" label="Total Active" value={stats.totalActive} color="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400" active={statusFilter === 'all'} onClick={() => handleStatClick('all')} />
-        )}
+        <StatCard icon="confirmation_number" label="Total Active" value={stats.totalActive} color="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400" active={statusFilter === 'all'} onClick={() => handleStatClick('all')} />
       </motion.div>
 
       {/* Tickets Table */}
