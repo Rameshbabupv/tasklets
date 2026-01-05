@@ -65,6 +65,14 @@ export function requireRole(...roles: string[]) {
   }
 }
 
+// Requires client user (has clientId, not internal)
+export function requireClientUser(req: Request, res: Response, next: NextFunction) {
+  if (!req.user?.clientId || req.user.isInternal) {
+    return res.status(403).json({ error: 'Forbidden: Client user access required' })
+  }
+  next()
+}
+
 // Requires user to be admin of their client (company_admin role + has clientId)
 export function requireClientAdmin(req: Request, res: Response, next: NextFunction) {
   if (!req.user?.clientId || req.user.role !== 'company_admin') {
