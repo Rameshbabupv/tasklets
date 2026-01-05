@@ -93,6 +93,17 @@ export const productSequences = pgTable('product_sequences', {
   uniqueProductType: unique().on(table.productId, table.issueType),
 }))
 
+// Global ticket counters for client portal (SUP-S###, SUP-F###)
+export const globalTicketCounters = pgTable('global_ticket_counters', {
+  id: serial('id').primaryKey(),
+  // Type: S=Support, F=Feature_request
+  type: text('type', { enum: ['S', 'F'] }).notNull(),
+  nextNum: integer('next_num').default(1).notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+}, (table) => ({
+  uniqueType: unique().on(table.type),
+}))
+
 // Client-Product assignment (what products client purchased)
 export const clientProducts = pgTable('client_products', {
   id: serial('id').primaryKey(),

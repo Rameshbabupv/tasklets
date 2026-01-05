@@ -4,7 +4,7 @@ import { tickets, attachments, ticketComments, ticketLinks, clients, users, prod
 import { eq, and, desc, or, count, sql, inArray } from 'drizzle-orm'
 import { authenticate, requireInternal, requireClientAdmin } from '../middleware/auth.js'
 import { upload } from '../middleware/upload.js'
-import { generateIssueKey } from '../utils/issueKey.js'
+import { generateIssueKey, generateGlobalIssueKey } from '../utils/issueKey.js'
 
 export const ticketRoutes = Router()
 
@@ -166,7 +166,21 @@ ticketRoutes.post('/', async (req, res) => {
     }
 
     // Generate the issue key and nanoUUID
-    const { key: issueKey, id } = await generateIssueKey(productId, ticketType)
+    // Use global counter for client portal (support/feature_request), product-based for internal
+    let issueKey: string
+    let id: string
+
+    if (!isInternal && (ticketType === 'support' || ticketType === 'feature_request')) {
+      // Client portal tickets get global keys (SUP-S###, SUP-F###)
+      const generated = await generateGlobalIssueKey(ticketType)
+      issueKey = generated.key
+      id = generated.id
+    } else {
+      // Internal tickets use product-based keys
+      const generated = await generateIssueKey(productId, ticketType)
+      issueKey = generated.key
+      id = generated.id
+    }
 
     const [ticket] = await db.insert(tickets).values({
       id,

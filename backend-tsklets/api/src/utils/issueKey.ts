@@ -1,5 +1,5 @@
 import { db } from '../db/index.js'
-import { products, productSequences } from '../db/schema.js'
+import { products, productSequences, globalTicketCounters } from '../db/schema.js'
 import { eq, and } from 'drizzle-orm'
 import { nanoid } from 'nanoid'
 
@@ -163,4 +163,58 @@ export function parseIssueKey(key: string): {
  */
 export function isValidIssueKey(key: string): boolean {
   return parseIssueKey(key) !== null
+}
+
+/**
+ * Generate a global issue key for client portal tickets
+ * Format: SUP-S###, SUP-F### (for support and feature_request types)
+ * Thread-safe with atomic increment using transactions
+ *
+ * @param type - Ticket type ('support' or 'feature_request')
+ * @returns Promise<{ key: string, id: string }> - The generated key and nanoUUID
+ */
+export async function generateGlobalIssueKey(
+  type: 'support' | 'feature_request'
+): Promise<{ key: string; id: string }> {
+  // Map ticket type to global counter type code
+  const typeCode = type === 'support' ? 'S' : 'F'
+
+  // Use a transaction to ensure atomic increment
+  const sequenceNum = await db.transaction(async (tx) => {
+    // Try to get existing counter
+    const [existing] = await tx
+      .select({ id: globalTicketCounters.id, nextNum: globalTicketCounters.nextNum })
+      .from(globalTicketCounters)
+      .where(eq(globalTicketCounters.type, typeCode as any))
+      .limit(1)
+
+    let num: number
+
+    if (existing) {
+      // Increment existing counter
+      num = existing.nextNum
+      await tx
+        .update(globalTicketCounters)
+        .set({ nextNum: num + 1 })
+        .where(eq(globalTicketCounters.id, existing.id))
+    } else {
+      // Create new counter for this type
+      num = 1
+      await tx.insert(globalTicketCounters).values({
+        type: typeCode as any,
+        nextNum: 2, // Next one will be 2
+      })
+    }
+
+    return num
+  })
+
+  // Format sequence as 3-digit padded number (001, 002, ..., 999, 1000, ...)
+  const paddedNum = sequenceNum.toString().padStart(3, '0')
+
+  // Generate the key in format: SUP-S001, SUP-F042
+  const key = `SUP-${typeCode}${paddedNum}`
+  const id = generateTicketId()
+
+  return { key, id }
 }
