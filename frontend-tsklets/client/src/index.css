@@ -1,0 +1,153 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================
+   CSS Variables - Global Theme System
+   ======================================== */
+
+:root {
+  /* Backgrounds */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-elevated: #ffffff;
+
+  /* Text */
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+
+  /* Borders */
+  --border-primary: #e2e8f0;
+  --border-secondary: #cbd5e1;
+
+  /* Accent - Blue for client portal */
+  --accent-primary: #3c83f6;
+  --accent-secondary: #6366f1;
+
+  /* Gradients */
+  --gradient-start: rgba(60, 131, 246, 0.08);
+  --gradient-end: rgba(99, 102, 241, 0.08);
+
+  /* Status colors */
+  --success-bg: #f0fdf4;
+  --success-text: #166534;
+  --error-bg: #fef2f2;
+  --error-text: #991b1b;
+}
+
+.dark {
+  color-scheme: dark;
+
+  /* Backgrounds */
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-card: #1e293b;
+  --bg-elevated: #334155;
+
+  /* Text */
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+
+  /* Borders */
+  --border-primary: #334155;
+  --border-secondary: #475569;
+
+  /* Gradients */
+  --gradient-start: rgba(60, 131, 246, 0.15);
+  --gradient-end: rgba(99, 102, 241, 0.15);
+
+  /* Status colors */
+  --success-bg: #14532d;
+  --success-text: #86efac;
+  --error-bg: #7f1d1d;
+  --error-text: #fca5a5;
+}
+
+/* ========================================
+   Base Styles
+   ======================================== */
+
+body {
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ========================================
+   Dark Mode Utility Overrides
+   ======================================== */
+.dark .bg-background-light { background-color: var(--bg-secondary); }
+.dark .bg-white { background-color: var(--bg-card); }
+.dark .bg-slate-50,
+.dark .bg-slate-100 { background-color: var(--bg-tertiary); }
+.dark .text-slate-900,
+.dark .text-slate-800 { color: var(--text-primary); }
+.dark .text-slate-700,
+.dark .text-slate-600,
+.dark .text-slate-500 { color: var(--text-secondary); }
+.dark .text-slate-400 { color: var(--text-muted); }
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-300 { border-color: var(--border-primary); }
+
+/* ========================================
+   Component Classes (using CSS Variables)
+   ======================================== */
+
+@layer components {
+  /* Card */
+  .card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-primary);
+    border-radius: 0.75rem;
+  }
+
+  /* Header */
+  .header {
+    background-color: var(--bg-card);
+    border-bottom: 1px solid var(--border-primary);
+  }
+
+  /* Text utilities */
+  .text-heading { color: var(--text-primary); }
+  .text-body { color: var(--text-secondary); }
+  .text-muted { color: var(--text-muted); }
+
+  /* Input field */
+  .input-field {
+    background-color: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border-primary);
+    @apply w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all;
+  }
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* ========================================
+   Utility Classes
+   ======================================== */
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Border width utilities */
+.border-3 {
+  border-width: 3px;
+}

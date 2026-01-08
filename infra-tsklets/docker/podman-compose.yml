@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: Containerfile
+    container_name: tasklets_app
+    ports:
+      - "3000:3000"   # client portal
+      - "3001:3001"   # internal portal
+      - "4000:4000"   # API
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-4000}
+      - HOST=${HOST:-0.0.0.0}
+      - JWT_SECRET=${JWT_SECRET}
+      - DATABASE_URL=postgres://${DB_USER:-tasklets}:${DB_PASSWORD:-tasklets}@db:5432/${DB_NAME:-tasklets}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001}
+    depends_on:
+      - db
+
+  db:
+    image: docker.io/library/postgres:18
+    container_name: tasklets_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME:-tasklets}
+      POSTGRES_USER: ${DB_USER:-tasklets}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-tasklets}
+    ports:
+      - "5432:5432"
+    volumes:
+      - tasklets_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-tasklets}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: docker.io/dpage/pgadmin4:latest
+    container_name: tasklets_pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+volumes:
+  tasklets_pgdata:
+
