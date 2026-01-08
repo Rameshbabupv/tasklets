@@ -11,7 +11,8 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/db/seeds/index.ts essentials",
     "db:seed:demo": "tsx src/db/seeds/index.ts demo",
-    "db:import:beads": "tsx src/scripts/import-beads.ts"
+    "db:import:beads": "tsx src/scripts/import-beads.ts",
+    "db:import:beads:api": "tsx src/scripts/import-beads-api.ts"
   },
   "dependencies": {
     "@libsql/client": "^0.4.3",
