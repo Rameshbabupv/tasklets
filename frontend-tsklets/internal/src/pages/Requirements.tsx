@@ -5,6 +5,9 @@ import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast, Toaster } from 'sonner'
 import { Requirement, RequirementStatus } from '@tsklets/types'
+import MarkdownEditor from '../components/MarkdownEditor'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface Product {
   id: number
@@ -309,9 +312,11 @@ export default function Requirements() {
                                 </h3>
 
                                 {req.description && (
-                                  <p className="text-sm mb-3 line-clamp-2" style={{ color: 'var(--text-secondary)' }}>
-                                    {req.description}
-                                  </p>
+                                  <div className="text-sm mb-3 prose prose-sm max-w-none line-clamp-3 dark:prose-invert" style={{ color: 'var(--text-secondary)' }}>
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                      {req.description}
+                                    </ReactMarkdown>
+                                  </div>
                                 )}
 
                                 <div className="flex items-center gap-2 flex-wrap">
@@ -379,9 +384,17 @@ export default function Requirements() {
                     onChange={(e) => setNewRequirement({ ...newRequirement, title: e.target.value })}
                     className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary/50"
                     style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}
-                    placeholder="Brief title for the requirement"
+                    placeholder="Brief title for requirement"
                   />
                 </div>
+
+                <MarkdownEditor
+                  value={newRequirement.description}
+                  onChange={(val) => setNewRequirement({ ...newRequirement, description: val })}
+                  label="Description"
+                  placeholder="Describe requirement in your own words. This will be preserved as original draft."
+                  height={128}
+                />
 
                 <div>
                   <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>

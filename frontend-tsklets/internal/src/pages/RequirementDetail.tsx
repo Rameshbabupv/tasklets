@@ -5,6 +5,9 @@ import { useAuthStore } from '../store/auth'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast, Toaster } from 'sonner'
 import { Requirement, RequirementAmendment, RequirementStatus } from '@tsklets/types'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import MarkdownEditor from '../components/MarkdownEditor'
 
 const statusColors: Record<RequirementStatus, string> = {
   draft: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-700 dark:text-slate-200',
@@ -333,9 +336,11 @@ export default function RequirementDetail() {
                       Preserved
                     </span>
                   </div>
-                  <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>
-                    {requirement.originalDraft}
-                  </p>
+                  <div className="prose prose-sm max-w-none dark:prose-invert" style={{ color: 'var(--text-secondary)' }}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {requirement.originalDraft}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               )}
 
@@ -352,7 +357,9 @@ export default function RequirementDetail() {
                 </div>
                 {requirement.claudeRewrite ? (
                   <div className="prose prose-sm max-w-none dark:prose-invert" style={{ color: 'var(--text-secondary)' }}>
-                    {requirement.claudeRewrite}
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {requirement.claudeRewrite}
+                    </ReactMarkdown>
                   </div>
                 ) : (
                   <p className="text-sm italic" style={{ color: 'var(--text-secondary)' }}>
@@ -365,9 +372,11 @@ export default function RequirementDetail() {
               {requirement.description && (
                 <div className="p-6 rounded-xl border" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-primary)' }}>
                   <h3 className="font-semibold mb-3" style={{ color: 'var(--text-primary)' }}>Description</h3>
-                  <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>
-                    {requirement.description}
-                  </p>
+                  <div className="prose prose-sm max-w-none dark:prose-invert" style={{ color: 'var(--text-secondary)' }}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {requirement.description}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               )}
 
@@ -681,26 +690,20 @@ export default function RequirementDetail() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>Description</label>
-                  <textarea
-                    value={editData.description || ''}
-                    onChange={(e) => setEditData({ ...editData, description: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary/50 h-32 resize-none"
-                    style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}
-                  />
-                </div>
+                <MarkdownEditor
+                  value={editData.description || ''}
+                  onChange={(val) => setEditData({ ...editData, description: val })}
+                  label="Description"
+                  height={128}
+                />
 
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>Claude Rewrite</label>
-                  <textarea
-                    value={editData.claudeRewrite || ''}
-                    onChange={(e) => setEditData({ ...editData, claudeRewrite: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary/50 h-40 resize-none"
-                    style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}
-                    placeholder="Claude's structured version"
-                  />
-                </div>
+                <MarkdownEditor
+                  value={editData.claudeRewrite || ''}
+                  onChange={(val) => setEditData({ ...editData, claudeRewrite: val })}
+                  label="Claude Rewrite"
+                  placeholder="Claude's structured version"
+                  height={160}
+                />
 
                 <div>
                   <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>Beads Epic ID</label>
