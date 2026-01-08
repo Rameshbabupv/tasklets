@@ -398,19 +398,6 @@ export default function Requirements() {
 
                 <div>
                   <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
-                    Description
-                  </label>
-                  <textarea
-                    value={newRequirement.description}
-                    onChange={(e) => setNewRequirement({ ...newRequirement, description: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary/50 h-32 resize-none"
-                    style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', borderColor: 'var(--border-primary)' }}
-                    placeholder="Describe the requirement in your own words. This will be preserved as the original draft."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
                     Priority
                   </label>
                   <select
