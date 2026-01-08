@@ -64,10 +64,11 @@ requirementRoutes.get('/', requireInternal, async (req, res) => {
 
     // Filter by status if provided
     if (status) {
-      query = query.where(and(
-        eq(requirements.productId, parseInt(productId as string)),
-        eq(requirements.status, status as string)
-      )) as any
+      query = db.select().from(requirements)
+        .where(and(
+          eq(requirements.productId, parseInt(productId as string)),
+          eq(requirements.status, status as any)
+        ))
     }
 
     const results = await query.orderBy(desc(requirements.createdAt))
