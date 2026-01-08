@@ -147,7 +147,32 @@ class BeadsImporter {
 
   async readBeadsIssues(): Promise<BeadsIssue[]> {
     console.log('📖 Reading .beads/issues.jsonl...');
-    const beadsPath = '../../../../.beads/issues.jsonl';
+    // Try multiple possible paths
+    const possiblePaths = [
+      '../../../../.beads/issues.jsonl', // From src/scripts/
+      '../../../.beads/issues.jsonl', // From node_modules execution
+      '.beads/issues.jsonl', // From root
+      '/Users/rameshbabu/data/projects/systech/tsklets/.beads/issues.jsonl', // Absolute
+    ];
+
+    let beadsPath = '';
+    for (const path of possiblePaths) {
+      try {
+        if (fs.existsSync(path)) {
+          beadsPath = path;
+          break;
+        }
+      } catch (e) {
+        // Continue to next path
+      }
+    }
+
+    if (!beadsPath) {
+      throw new Error(
+        `Could not find .beads/issues.jsonl. Tried: ${possiblePaths.join(', ')}`
+      );
+    }
+
     const issues: BeadsIssue[] = [];
 
     return new Promise((resolve, reject) => {
