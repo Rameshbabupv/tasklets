@@ -58,12 +58,13 @@ export async function authenticateApiKey(req: Request, res: Response, next: Next
     // Rate limiting
     const now = Date.now()
     const windowMs = 60 * 1000 // 1 minute window
+    const rateLimit = keyRecord.rateLimit ?? 1000
     const rateData = rateLimitStore.get(keyRecord.id)
 
     if (rateData && now < rateData.resetAt) {
-      if (rateData.count >= keyRecord.rateLimit) {
+      if (rateData.count >= rateLimit) {
         const retryAfter = Math.ceil((rateData.resetAt - now) / 1000)
-        res.setHeader('X-RateLimit-Limit', keyRecord.rateLimit.toString())
+        res.setHeader('X-RateLimit-Limit', rateLimit.toString())
         res.setHeader('X-RateLimit-Remaining', '0')
         res.setHeader('X-RateLimit-Reset', rateData.resetAt.toString())
         res.setHeader('Retry-After', retryAfter.toString())
@@ -86,15 +87,15 @@ export async function authenticateApiKey(req: Request, res: Response, next: Next
     // Attach API key user info to request
     req.apiKeyUser = {
       apiKeyId: keyRecord.id,
-      userId: keyRecord.userId,
+      userId: keyRecord.createdBy,
       tenantId: keyRecord.tenantId,
       scopes: keyRecord.scopes as string[],
-      rateLimit: keyRecord.rateLimit,
+      rateLimit: keyRecord.rateLimit ?? 1000,
     }
 
     // Set rate limit headers
-    const remaining = keyRecord.rateLimit - (rateLimitStore.get(keyRecord.id)?.count || 1)
-    res.setHeader('X-RateLimit-Limit', keyRecord.rateLimit.toString())
+    const remaining = rateLimit - (rateLimitStore.get(keyRecord.id)?.count || 1)
+    res.setHeader('X-RateLimit-Limit', rateLimit.toString())
     res.setHeader('X-RateLimit-Remaining', Math.max(0, remaining).toString())
 
     next()

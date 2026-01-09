@@ -28,6 +28,14 @@
 - Phase 1: Security (helmet, CORS, rate limiting)
 - Phase 2: PostgreSQL
 - Phase 3: S3 (in progress)
+
+### 6. Rich Text Editor Implementation (2026-01-08)
+- **Always remove old code when replacing**: Left duplicate textarea when adding MarkdownEditor, causing UI confusion
+- **Test immediately after implementation**: Browser behavior differs from curl - need user testing
+- **Drizzle ORM query patterns**: Chained `.where()` doesn't work the same as initial query - use conditional construction
+- **Markdown libraries**: `react-markdown` + `remark-gfm` work well for GFM support
+- **GitFlow**: Feature → develop → main workflow keeps branches clean
+- **Component reusability**: Created MarkdownEditor as reusable component with edit/preview toggle
 - Phase 4: Deployment infra
 - Incremental, not big-bang
 

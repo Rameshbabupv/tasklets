@@ -43,7 +43,9 @@
 | `dev-tasks.ts` | `/api/v1/dev-tasks` | Epic/Feature/Task management |
 | `sprints.ts` | `/api/v1/sprints` | Sprint management |
 | `products.ts` | `/api/v1/products` | Product management |
-| `ideas.ts` | `/api/v1/ideas` | Idea/feature requests |
+ | `ideas.ts` | `/api/v1/ideas` | Idea/feature requests |
+ | `requirements.ts` | `/api/requirements` | Requirement management with markdown support |
+
 
 ### Middleware
 
@@ -102,15 +104,22 @@
 | `SprintPlanning` | Plan upcoming sprints |
 
 ### Shared UI (frontend-tsklets/shared/ui)
+ 
+ | Component | Purpose |
+ |-----------|---------|
+ | `Button` | Standard button |
+ | `Card` | Container card |
+ | `StatusBadge` | Ticket/task status display |
+ | `PriorityPill` | P1/P2/P3/P4 indicator |
+ | `TicketCard` | Ticket summary card |
+ | `Spinner` | Loading indicator |
 
-| Component | Purpose |
-|-----------|---------|
-| `Button` | Standard button |
-| `Card` | Container card |
-| `StatusBadge` | Ticket/task status display |
-| `PriorityPill` | P1/P2/P3/P4 indicator |
-| `TicketCard` | Ticket summary card |
-| `Spinner` | Loading indicator |
+### Internal Portal Components (frontend-tsklets/internal)
+ 
+ | Component | Purpose |
+ |-----------|---------|
+ | `MarkdownEditor` | Rich text markdown editor with edit/preview toggle |
+
 
 ### Shared Types (frontend-tsklets/shared/types)
 

@@ -14,7 +14,7 @@ apiKeyRoutes.use(authenticate)
 apiKeyRoutes.post('/', async (req: Request, res: Response) => {
   try {
     const { name, scopes = ['read'] } = req.body
-    const userId = req.user!.id
+    const createdBy = req.user!.userId
     const tenantId = req.user!.tenantId
 
     if (!name?.trim()) {
@@ -29,7 +29,7 @@ apiKeyRoutes.post('/', async (req: Request, res: Response) => {
     const [apiKey] = await db.insert(apiKeys)
       .values({
         tenantId,
-        userId,
+        createdBy,
         name: name.trim(),
         keyHash,
         keyPrefix,
@@ -63,7 +63,7 @@ apiKeyRoutes.post('/', async (req: Request, res: Response) => {
 // List API keys (without exposing actual keys)
 apiKeyRoutes.get('/', async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.id
+    const createdBy = req.user!.userId
     const tenantId = req.user!.tenantId
 
     const keys = await db.select({
@@ -79,7 +79,7 @@ apiKeyRoutes.get('/', async (req: Request, res: Response) => {
       .from(apiKeys)
       .where(and(
         eq(apiKeys.tenantId, tenantId),
-        eq(apiKeys.userId, userId)
+        eq(apiKeys.createdBy, createdBy)
       ))
       .orderBy(desc(apiKeys.createdAt))
 
@@ -94,7 +94,7 @@ apiKeyRoutes.get('/', async (req: Request, res: Response) => {
 apiKeyRoutes.patch('/:id', async (req: Request, res: Response) => {
   try {
     const keyId = parseInt(req.params.id)
-    const userId = req.user!.id
+    const createdBy = req.user!.userId
     const tenantId = req.user!.tenantId
     const { name, scopes, rateLimit } = req.body
 
@@ -104,7 +104,7 @@ apiKeyRoutes.patch('/:id', async (req: Request, res: Response) => {
       .where(and(
         eq(apiKeys.id, keyId),
         eq(apiKeys.tenantId, tenantId),
-        eq(apiKeys.userId, userId)
+        eq(apiKeys.createdBy, createdBy)
       ))
       .limit(1)
 
@@ -112,9 +112,7 @@ apiKeyRoutes.patch('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'API key not found' })
     }
 
-    const updates: Record<string, any> = {
-      updatedAt: new Date(),
-    }
+    const updates: Record<string, any> = {}
 
     if (name?.trim()) updates.name = name.trim()
     if (scopes) updates.scopes = scopes
@@ -145,7 +143,7 @@ apiKeyRoutes.patch('/:id', async (req: Request, res: Response) => {
 apiKeyRoutes.delete('/:id', async (req: Request, res: Response) => {
   try {
     const keyId = parseInt(req.params.id)
-    const userId = req.user!.id
+    const createdBy = req.user!.userId
     const tenantId = req.user!.tenantId
 
     // Verify ownership
@@ -154,7 +152,7 @@ apiKeyRoutes.delete('/:id', async (req: Request, res: Response) => {
       .where(and(
         eq(apiKeys.id, keyId),
         eq(apiKeys.tenantId, tenantId),
-        eq(apiKeys.userId, userId)
+        eq(apiKeys.createdBy, createdBy)
       ))
       .limit(1)
 
