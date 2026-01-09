@@ -11,6 +11,11 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/db/seeds/index.ts essentials",
     "db:seed:demo": "tsx src/db/seeds/index.ts demo",
+    "db:seed:lookups": "tsx src/scripts/db-seed-lookups.ts",
+    "db:seed:sample": "tsx src/scripts/db-seed-sample.ts",
+    "db:backup": "tsx src/scripts/db-backup.ts",
+    "db:reset": "tsx src/scripts/db-reset.ts",
+    "db:restore": "tsx src/scripts/db-restore.ts",
     "db:import:beads": "tsx src/scripts/import-beads.ts",
     "db:import:beads:api": "tsx src/scripts/import-beads-api.ts"
   },
