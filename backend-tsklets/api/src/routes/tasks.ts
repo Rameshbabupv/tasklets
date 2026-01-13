@@ -233,6 +233,7 @@ taskRoutes.post('/:id/assign', requireInternal, async (req, res) => {
     // Add new assignments
     for (const userId of userIds) {
       await db.insert(taskAssignments).values({
+        tenantId: task.tenantId,
         taskId: parseInt(id),
         userId,
       })
@@ -417,7 +418,7 @@ taskRoutes.patch('/:id/sprint', requireInternal, async (req, res) => {
     }
 
     const [updated] = await db.update(devTasks)
-      .set({ sprintId: sprintId ?? null, updatedAt: new Date().toISOString() })
+      .set({ sprintId: sprintId ?? null, updatedAt: new Date() })
       .where(eq(devTasks.id, parseInt(id)))
       .returning()
 
@@ -449,7 +450,7 @@ taskRoutes.patch('/:id/points', requireInternal, async (req, res) => {
     }
 
     const [updated] = await db.update(devTasks)
-      .set({ storyPoints, updatedAt: new Date().toISOString() })
+      .set({ storyPoints, updatedAt: new Date() })
       .where(eq(devTasks.id, parseInt(id)))
       .returning()
 
@@ -625,7 +626,9 @@ taskRoutes.get('/all', requireInternal, async (req, res) => {
         .from(tickets)
         .where(inArray(tickets.id, ticketIds))
       ticketsList.forEach(t => {
-        ticketMap[t.id] = { issueKey: t.issueKey || '', title: t.title, status: t.status }
+        if (t.id !== null) {
+          ticketMap[t.id] = { issueKey: t.issueKey ?? '', title: t.title ?? '', status: t.status ?? 'open' }
+        }
       })
     }
 

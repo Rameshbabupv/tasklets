@@ -110,6 +110,7 @@ sprintRoutes.get('/:id', requireInternal, async (req, res) => {
 sprintRoutes.post('/', requireInternal, async (req, res) => {
   try {
     const { name, goal, startDate } = req.body
+    const { tenantId } = req.user!
 
     if (!startDate) {
       return res.status(400).json({ error: 'startDate is required' })
@@ -120,10 +121,11 @@ sprintRoutes.post('/', requireInternal, async (req, res) => {
     const sprintName = name || generateSprintName(start)
 
     const [sprint] = await db.insert(sprints).values({
+      tenantId,
       name: sprintName,
       goal: goal || null,
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0],
+      startDate: start,
+      endDate: end,
       status: 'planning',
     }).returning()
 
@@ -148,7 +150,7 @@ sprintRoutes.patch('/:id', requireInternal, async (req, res) => {
       return res.status(404).json({ error: 'Sprint not found' })
     }
 
-    const updateData: any = { updatedAt: new Date().toISOString() }
+    const updateData: any = { updatedAt: new Date() }
     if (name) updateData.name = name
     if (goal !== undefined) updateData.goal = goal
     if (startDate) updateData.startDate = startDate
@@ -232,7 +234,7 @@ sprintRoutes.post('/:id/start', requireInternal, async (req, res) => {
     }
 
     const [updated] = await db.update(sprints)
-      .set({ status: 'active', updatedAt: new Date().toISOString() })
+      .set({ status: 'active', updatedAt: new Date() })
       .where(eq(sprints.id, parseInt(id)))
       .returning()
 
@@ -301,7 +303,7 @@ sprintRoutes.post('/:id/complete', requireInternal, async (req, res) => {
       .set({
         status: 'completed',
         velocity: completedPoints,
-        updatedAt: new Date().toISOString(),
+        updatedAt: new Date(),
       })
       .where(eq(sprints.id, parseInt(id)))
       .returning()
@@ -354,6 +356,7 @@ sprintRoutes.post('/:id/capacity', requireInternal, async (req, res) => {
   try {
     const { id } = req.params
     const { userId, availablePoints } = req.body
+    const { tenantId } = req.user!
 
     if (!userId) {
       return res.status(400).json({ error: 'userId is required' })
@@ -379,6 +382,7 @@ sprintRoutes.post('/:id/capacity', requireInternal, async (req, res) => {
 
     // Create
     const [capacity] = await db.insert(sprintCapacity).values({
+      tenantId,
       sprintId: parseInt(id),
       userId,
       availablePoints: availablePoints || 20,
@@ -416,6 +420,7 @@ sprintRoutes.post('/:id/retro', requireInternal, async (req, res) => {
   try {
     const { id } = req.params
     const { wentWell, improvements, actionItems } = req.body
+    const { tenantId } = req.user!
 
     // Check if exists
     const [existing] = await db.select().from(sprintRetros)
@@ -429,7 +434,7 @@ sprintRoutes.post('/:id/retro', requireInternal, async (req, res) => {
           wentWell: wentWell ?? existing.wentWell,
           improvements: improvements ?? existing.improvements,
           actionItems: actionItems ?? existing.actionItems,
-          updatedAt: new Date().toISOString(),
+          updatedAt: new Date(),
         })
         .where(eq(sprintRetros.id, existing.id))
         .returning()
@@ -439,6 +444,7 @@ sprintRoutes.post('/:id/retro', requireInternal, async (req, res) => {
 
     // Create
     const [retro] = await db.insert(sprintRetros).values({
+      tenantId,
       sprintId: parseInt(id),
       wentWell,
       improvements,

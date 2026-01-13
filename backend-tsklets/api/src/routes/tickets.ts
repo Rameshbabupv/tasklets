@@ -246,7 +246,7 @@ ticketRoutes.get('/', async (req, res) => {
 
     // Add status filter if provided
     if (statusFilter && typeof statusFilter === 'string') {
-      whereConditions.push(eq(tickets.status, statusFilter))
+      whereConditions.push(eq(tickets.status, statusFilter as 'pending_internal_review' | 'open' | 'in_progress' | 'waiting_for_customer' | 'rebuttal' | 'resolved' | 'closed' | 'reopened' | 'cancelled'))
     }
 
     const whereClause = whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0]

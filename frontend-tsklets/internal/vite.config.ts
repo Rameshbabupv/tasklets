@@ -47,5 +47,13 @@ export default defineConfig({
       '/uploads': API_URL,
     },
   },
+  preview: {
+    host: '0.0.0.0',
+    port: 4020,
+    proxy: {
+      '/api': API_URL,
+      '/uploads': API_URL,
+    },
+  },
 })
 

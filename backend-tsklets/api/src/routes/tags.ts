@@ -135,9 +135,7 @@ tagRoutes.patch('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Tag not found' })
     }
 
-    const updates: Partial<typeof existing> = {
-      updatedAt: new Date(),
-    }
+    const updates: Partial<typeof existing> = {}
 
     if (name?.trim()) {
       updates.name = name.trim()
