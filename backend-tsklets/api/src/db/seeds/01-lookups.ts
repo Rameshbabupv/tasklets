@@ -66,13 +66,13 @@ export async function seedLookups(tenantId: number) {
 
   // Initialize product sequences
   console.log('Initializing product sequences...')
-  const types = ['S', 'B', 'T', 'F', 'R', 'E', 'K', 'N'] // S=Support, B=Bug, T=Task, F=Feature, R=Request, E=Epic, K=Spike, N=Note
+  const types = ['S', 'B', 'T', 'F', 'R', 'E', 'K', 'N'] as const // S=Support, B=Bug, T=Task, F=Feature, R=Request, E=Epic, K=Spike, N=Note
 
   for (const product of productsData) {
     for (const type of types) {
       await db.insert(productSequences).values({
         productId: product.id,
-        issueType: type,
+        issueType: type as 'S' | 'B' | 'T' | 'F' | 'R' | 'E' | 'K' | 'N',
         nextNum: 1,
       }).onConflictDoNothing()
     }

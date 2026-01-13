@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { db } from '../db/index.js'
 import { products, clientProducts, clients, epics, features, devTasks, modules, components, addons } from '../db/schema.js'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { authenticate, requireInternal } from '../middleware/auth.js'
 
 export const productRoutes = Router()
@@ -23,14 +23,21 @@ productRoutes.get('/', async (req, res) => {
 // Create new product (owner only)
 productRoutes.post('/', requireInternal, async (req, res) => {
   try {
-    const { name, description } = req.body
+    const { name, description, code } = req.body
+    const { tenantId } = req.user!
 
     if (!name) {
       return res.status(400).json({ error: 'Product name is required' })
     }
 
+    if (!code) {
+      return res.status(400).json({ error: 'Product code is required' })
+    }
+
     const [product] = await db.insert(products).values({
+      tenantId,
       name,
+      code,
       description,
     }).returning()
 
@@ -80,15 +87,16 @@ productRoutes.patch('/:id', requireInternal, async (req, res) => {
 // Assign products to tenant (owner only)
 productRoutes.post('/assign', requireInternal, async (req, res) => {
   try {
-    const { tenantId, productIds } = req.body
+    const { tenantId, clientId, productIds } = req.body
 
-    if (!tenantId || !productIds || !Array.isArray(productIds)) {
-      return res.status(400).json({ error: 'tenantId and productIds array required' })
+    if (!tenantId || !clientId || !productIds || !Array.isArray(productIds)) {
+      return res.status(400).json({ error: 'tenantId, clientId, and productIds array required' })
     }
 
     // Insert all assignments
     const assignments = productIds.map((productId: number) => ({
       tenantId,
+      clientId,
       productId,
     }))
 
@@ -178,21 +186,25 @@ productRoutes.put('/client/:clientId', requireInternal, async (req, res) => {
 productRoutes.put('/tenant/:tenantId', requireInternal, async (req, res) => {
   try {
     const { tenantId } = req.params
-    const { productIds } = req.body
+    const { clientId, productIds } = req.body
 
-    if (!productIds || !Array.isArray(productIds)) {
-      return res.status(400).json({ error: 'productIds array required' })
+    if (!clientId || !productIds || !Array.isArray(productIds)) {
+      return res.status(400).json({ error: 'clientId and productIds array required' })
     }
 
     const tid = parseInt(tenantId)
 
     // Delete existing assignments
-    await db.delete(clientProducts).where(eq(clientProducts.tenantId, tid))
+    await db.delete(clientProducts).where(and(
+      eq(clientProducts.tenantId, tid),
+      eq(clientProducts.clientId, clientId)
+    ))
 
     // Insert new assignments
     if (productIds.length > 0) {
       const assignments = productIds.map((productId: number) => ({
         tenantId: tid,
+        clientId,
         productId,
       }))
       await db.insert(clientProducts).values(assignments)

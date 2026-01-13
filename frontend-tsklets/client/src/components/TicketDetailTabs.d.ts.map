@@ -1,0 +1,1 @@
+{"version":3,"file":"TicketDetailTabs.d.ts","sourceRoot":"","sources":["TicketDetailTabs.tsx"],"names":[],"mappings":"AAWA,UAAU,qBAAqB;IAC7B,QAAQ,EAAE,MAAM,CAAA;IAChB,cAAc,EAAE,KAAK,CAAC,SAAS,CAAA;IAC/B,YAAY,CAAC,EAAE,MAAM,CAAA;IACrB,eAAe,CAAC,EAAE,MAAM,CAAA;CACzB;AAED,MAAM,CAAC,OAAO,UAAU,gBAAgB,CAAC,EACvC,QAAQ,EACR,cAAc,EACd,YAAgB,EAChB,eAAmB,GACpB,EAAE,qBAAqB,2CAmGvB"}

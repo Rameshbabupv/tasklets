@@ -195,7 +195,7 @@ requirementRoutes.patch('/:id/status', requireInternal, async (req, res) => {
     }
 
     // Validate status transitions
-    const currentStatus = requirement.status
+    const currentStatus = requirement.status || 'draft'
     const validTransitions: Record<string, string[]> = {
       'draft': ['brainstorm', 'cancelled'],
       'brainstorm': ['draft', 'solidified', 'cancelled'],
@@ -211,7 +211,7 @@ requirementRoutes.patch('/:id/status', requireInternal, async (req, res) => {
         error: 'Invalid status transition',
         currentStatus,
         requestedStatus: status,
-        validTransitions: validTransitions[currentStatus]
+        validTransitions: validTransitions[currentStatus] || []
       })
     }
 

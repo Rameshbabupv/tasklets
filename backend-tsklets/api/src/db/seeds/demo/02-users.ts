@@ -43,13 +43,12 @@ export async function seedUsers(tenantId: number) {
   for (const userData of usersData) {
 
     await db.insert(users).values({
-      id: userData.id,
       tenantId,
       clientId: userData.clientId,
       name: userData.name,
       email: userData.email,
       passwordHash,
-      role: userData.role,
+      role: userData.role as 'user' | 'gatekeeper' | 'company_admin' | 'approver' | 'integrator' | 'support' | 'ceo' | 'admin' | 'developer',
       isActive: true,
       requirePasswordChange: false,
     }).onConflictDoNothing()

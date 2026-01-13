@@ -278,6 +278,7 @@ teamRoutes.post('/:id/members', async (req, res) => {
 
     // Add member
     const [newMember] = await db.insert(teamMembers).values({
+      tenantId,
       teamId: parseInt(id),
       userId: newMemberId,
       role: memberRole,

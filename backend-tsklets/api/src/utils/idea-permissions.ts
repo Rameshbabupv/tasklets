@@ -19,7 +19,7 @@ export interface Idea {
  */
 export async function canViewIdea(idea: Idea, user: JWTPayload): Promise<boolean> {
   // Admin or Systech tenant can see ALL ideas (even private)
-  if (user.role === 'admin' || user.tenantId === SYSTECH_TENANT_ID || user.isOwner) {
+  if (user.role === 'admin' || user.tenantId === SYSTECH_TENANT_ID || user.isInternal) {
     return true
   }
 
@@ -59,7 +59,7 @@ export async function canViewIdea(idea: Idea, user: JWTPayload): Promise<boolean
  */
 export function canEditIdea(idea: Idea, user: JWTPayload): boolean {
   // Admin can edit any idea
-  if (user.role === 'admin' || user.isOwner) {
+  if (user.role === 'admin' || user.isInternal) {
     return true
   }
 
@@ -72,7 +72,7 @@ export function canEditIdea(idea: Idea, user: JWTPayload): boolean {
  */
 export async function canChangeVisibility(idea: Idea, user: JWTPayload): Promise<boolean> {
   // Admin can change any visibility
-  if (user.role === 'admin' || user.isOwner) {
+  if (user.role === 'admin' || user.isInternal) {
     return true
   }
 
@@ -103,7 +103,7 @@ export async function canChangeVisibility(idea: Idea, user: JWTPayload): Promise
  */
 export function canDeleteIdea(idea: Idea, user: JWTPayload): boolean {
   // Admin can delete any idea
-  if (user.role === 'admin' || user.isOwner) {
+  if (user.role === 'admin' || user.isInternal) {
     return true
   }
 

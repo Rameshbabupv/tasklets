@@ -192,8 +192,8 @@ export async function seedTickets(tenantId: number) {
       productId: t.productId,
       clientId: t.clientId,
       issueKey: t.issueKey,
-      type: t.type,
-      status: t.status,
+      type: t.type as 'support' | 'feature_request' | 'epic' | 'feature' | 'task' | 'bug' | 'spike' | 'note',
+      status: t.status as 'pending_internal_review' | 'open' | 'in_progress' | 'waiting_for_customer' | 'rebuttal' | 'resolved' | 'closed' | 'reopened' | 'cancelled',
       title: t.title,
       description: t.description,
       clientPriority: t.clientPriority,
@@ -231,7 +231,7 @@ export async function seedTickets(tenantId: number) {
       tenantId,
       sourceTicketId: l.sourceTicketId,
       targetTicketId: l.targetTicketId,
-      linkType: l.linkType,
+      linkType: l.linkType as 'blocks' | 'blocked_by' | 'relates_to' | 'duplicates' | 'duplicated_by' | 'parent_of' | 'child_of',
     }).onConflictDoNothing()
   }
   console.log(`Seeded ${ticketLinksData.length} ticket links`)

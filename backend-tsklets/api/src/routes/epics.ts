@@ -173,8 +173,8 @@ epicRoutes.patch('/:id/close', requireInternal, async (req, res) => {
         status: 'cancelled',
         resolution,
         resolutionNote: resolutionNote || null,
-        closedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        closedAt: new Date(),
+        updatedAt: new Date(),
       })
       .where(eq(epics.id, parseInt(id)))
       .returning()

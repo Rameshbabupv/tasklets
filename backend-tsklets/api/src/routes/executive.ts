@@ -292,12 +292,16 @@ executiveRoutes.get('/blockers', async (req, res) => {
     // Enrich with feature and epic names
     const enrichedBlockers = await Promise.all(
       blockedTasks.map(async (task) => {
-        const featureData = await db.select({
-          title: features.title,
-          epicId: features.epicId,
-        }).from(features)
-          .where(eq(features.id, task.featureId))
-          .limit(1)
+        let featureData: Array<{ title: string; epicId: number | null }> = []
+
+        if (task.featureId !== null) {
+          featureData = await db.select({
+            title: features.title,
+            epicId: features.epicId,
+          }).from(features)
+            .where(eq(features.id, task.featureId))
+            .limit(1)
+        }
 
         let epicName = null
         if (featureData[0]?.epicId) {

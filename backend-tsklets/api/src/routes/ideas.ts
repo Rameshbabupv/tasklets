@@ -39,7 +39,7 @@ ideaRoutes.post('/', async (req, res) => {
       teamId: visibility === 'team' ? teamId : null,
       createdBy: userId,
       status: 'inbox',
-      publishedAt: visibility !== 'private' ? new Date().toISOString() : null,
+      publishedAt: visibility !== 'private' ? new Date() : null,
     }).returning()
 
     // Fetch creator info
@@ -318,7 +318,7 @@ ideaRoutes.delete('/:id', async (req, res) => {
       await db.update(ideas)
         .set({
           status: 'archived',
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date()
         })
         .where(eq(ideas.id, parseInt(id)))
       res.json({ message: 'Idea archived successfully' })
@@ -334,7 +334,7 @@ ideaRoutes.post('/:id/comments', async (req, res) => {
   try {
     const { id } = req.params
     const { comment } = req.body
-    const { userId } = req.user!
+    const { userId, tenantId } = req.user!
 
     if (!comment || comment.trim() === '') {
       return res.status(400).json({ error: 'Comment is required' })
@@ -356,6 +356,7 @@ ideaRoutes.post('/:id/comments', async (req, res) => {
 
     // Add comment
     const [newComment] = await db.insert(ideaComments).values({
+      tenantId,
       ideaId: parseInt(id),
       userId,
       comment: comment.trim(),
@@ -365,7 +366,7 @@ ideaRoutes.post('/:id/comments', async (req, res) => {
     await db.update(ideas)
       .set({
         commentCount: (idea.commentCount || 0) + 1,
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date()
       })
       .where(eq(ideas.id, parseInt(id)))
 
@@ -395,7 +396,7 @@ ideaRoutes.post('/:id/reactions', async (req, res) => {
   try {
     const { id } = req.params
     const { reaction } = req.body
-    const { userId } = req.user!
+    const { userId, tenantId } = req.user!
 
     if (!['thumbs_up', 'heart', 'fire'].includes(reaction)) {
       return res.status(400).json({ error: 'Invalid reaction type' })
@@ -438,7 +439,7 @@ ideaRoutes.post('/:id/reactions', async (req, res) => {
       await db.update(ideas)
         .set({
           voteCount: Math.max(0, (idea.voteCount || 0) - 1),
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date()
         })
         .where(eq(ideas.id, parseInt(id)))
 
@@ -446,6 +447,7 @@ ideaRoutes.post('/:id/reactions', async (req, res) => {
     } else {
       // Add reaction
       await db.insert(ideaReactions).values({
+        tenantId,
         ideaId: parseInt(id),
         userId,
         reaction,
@@ -455,7 +457,7 @@ ideaRoutes.post('/:id/reactions', async (req, res) => {
       await db.update(ideas)
         .set({
           voteCount: (idea.voteCount || 0) + 1,
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date()
         })
         .where(eq(ideas.id, parseInt(id)))
 
