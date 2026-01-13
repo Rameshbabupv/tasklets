@@ -223,7 +223,7 @@ export default function IdeaDetail() {
     )
   }
 
-  const isCreator = user?.userId === idea.createdBy
+  const isCreator = user?.id === idea.createdBy
   const isAdmin = user?.role === 'admin' || user?.isInternal
 
   // Group reactions by type
@@ -233,7 +233,7 @@ export default function IdeaDetail() {
   }, {} as Record<string, number>)
 
   const userReactions = idea.reactions
-    .filter(r => r.user.id === user?.userId)
+    .filter(r => r.user.id === user?.id)
     .map(r => r.reaction)
 
   return (

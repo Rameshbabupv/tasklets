@@ -2,8 +2,6 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuthStore } from '../store/auth';
-import ThemeToggle from '../components/ThemeToggle';
 // Category data
 const categories = [
     {
@@ -124,13 +122,12 @@ const faqs = [
     },
 ];
 export default function KnowledgeBase() {
-    const { user, logout } = useAuthStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [searchFocused, setSearchFocused] = useState(false);
     const [openFaq, setOpenFaq] = useState(null);
     const filteredCategories = categories.filter((cat) => cat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         cat.description.toLowerCase().includes(searchQuery.toLowerCase()));
-    return (_jsxs("div", { className: "min-h-screen", style: { backgroundColor: 'var(--bg-secondary)' }, children: [_jsx(motion.header, { initial: { opacity: 0, y: -20 }, animate: { opacity: 1, y: 0 }, className: "bg-gradient-to-r from-white to-purple-50/30 dark:from-slate-800 dark:to-purple-900/30 border-b border-slate-200 dark:border-slate-700", children: _jsx("div", { className: "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8", children: _jsxs("div", { className: "flex items-center justify-between h-16", children: [_jsxs(Link, { to: "/", className: "flex items-center gap-3 hover:opacity-80 transition-opacity", children: [_jsx("div", { className: "flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 text-white shadow-lg", children: _jsx("span", { className: "material-symbols-outlined text-xl", children: "support_agent" }) }), _jsxs("div", { children: [_jsx("span", { className: "font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent", children: "Support Desk" }), _jsx("p", { className: "text-xs text-slate-500 dark:text-slate-400", children: "Knowledge Base" })] })] }), _jsxs("div", { className: "flex items-center gap-4", children: [_jsx(ThemeToggle, {}), _jsxs("div", { className: "flex items-center gap-3", children: [_jsxs("div", { className: "text-right hidden md:block", children: [_jsx("p", { className: "text-sm font-semibold text-slate-900 dark:text-slate-100", children: user?.name }), _jsx("p", { className: "text-xs text-slate-500 dark:text-slate-400 capitalize", children: user?.role })] }), _jsx("button", { onClick: () => logout(), className: "text-slate-400 hover:text-primary transition-colors p-2 hover:bg-white dark:hover:bg-slate-700 rounded-lg", children: _jsx("span", { className: "material-symbols-outlined", children: "logout" }) })] })] })] }) }) }), _jsxs("section", { className: "relative overflow-hidden", children: [_jsx("div", { className: "absolute inset-0 opacity-40 dark:opacity-20", children: _jsx("div", { className: "absolute inset-0", style: {
+    return (_jsxs("div", { className: "min-h-screen", style: { backgroundColor: 'var(--bg-secondary)' }, children: [_jsxs("section", { className: "relative overflow-hidden", children: [_jsx("div", { className: "absolute inset-0 opacity-40 dark:opacity-20", children: _jsx("div", { className: "absolute inset-0", style: {
                                 backgroundImage: `radial-gradient(circle at 1px 1px, var(--border-primary) 1px, transparent 0)`,
                                 backgroundSize: '40px 40px',
                             } }) }), _jsx(motion.div, { animate: {

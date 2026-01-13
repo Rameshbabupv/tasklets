@@ -386,7 +386,7 @@ export default function Sprints() {
               )}
 
               {/* Velocity Chart */}
-              {velocityData?.sprints?.length > 0 && (
+              {velocityData?.sprints && velocityData.sprints.length > 0 && (
                 <div className="mt-6">
                   <h3 className="text-sm font-semibold uppercase tracking-wider mb-3" style={textMuted}>
                     Velocity Trend

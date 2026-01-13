@@ -654,14 +654,14 @@ export default function AIConfigDetail() {
                           >
                             <div className="flex items-center justify-between mb-1">
                               <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
-                                v{version.versionNumber}
+                                v{version.version}
                                 {version.id === config.activeVersionId && (
                                   <span className="ml-2 text-xs text-primary">(active)</span>
                                 )}
                               </span>
                               {canEdit && version.id !== config.activeVersionId && (
                                 <button
-                                  onClick={() => handleRollback(version.versionNumber)}
+                                  onClick={() => handleRollback(version.version)}
                                   className="text-xs text-primary hover:underline"
                                 >
                                   Rollback

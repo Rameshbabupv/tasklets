@@ -187,7 +187,7 @@ export default function APIKeys() {
                         </div>
 
                         <div className="flex flex-wrap gap-2 mt-3">
-                          {key.scopes.map(scope => (
+                          {key.scopes?.map(scope => (
                             <span
                               key={scope}
                               className="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700"

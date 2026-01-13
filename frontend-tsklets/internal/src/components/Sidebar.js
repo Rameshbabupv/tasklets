@@ -40,6 +40,9 @@ const navStructure = [
             { path: '/sprints', emoji: '🏃', icon: 'sprint', label: 'Sprints', roles: ['admin', 'ceo', 'developer'] },
             { path: '/backlog', emoji: '📋', icon: 'list', label: 'Backlog', roles: ['admin', 'ceo', 'developer'] },
             { path: '/ideas', emoji: '💡', icon: 'lightbulb', label: 'Ideas', roles: ['admin', 'support', 'integrator', 'ceo', 'developer'] },
+            { path: '/ai-configs', emoji: '🤖', icon: 'psychology', label: 'AI Configs', roles: ['admin', 'ceo', 'developer'] },
+            { path: '/tags', emoji: '🏷️', icon: 'label', label: 'Tags', roles: ['admin', 'ceo', 'developer'] },
+            { path: '/api-keys', emoji: '🔑', icon: 'key', label: 'API Keys', roles: ['admin', 'ceo', 'developer'] },
         ],
     },
 ];

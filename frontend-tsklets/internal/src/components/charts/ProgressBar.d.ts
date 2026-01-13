@@ -14,7 +14,7 @@ interface RoadmapProgressProps {
     issueKey?: string;
     progress: number;
     targetDate?: string;
-    status?: 'on-track' | 'at-risk' | 'delayed' | 'completed';
+    status?: 'on-track' | 'at-risk' | 'delayed' | 'completed' | 'default';
     color?: string;
     children?: React.ReactNode;
     onClick?: () => void;
