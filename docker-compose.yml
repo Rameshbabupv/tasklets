@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  # Tsklets Application
+  # Uses existing tasklets_db container via shared network
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: tsklets-app
+    networks:
+      - tsklets-network
+    environment:
+      - DATABASE_URL=postgresql://postgres:change-this-secure-password@tasklets_db:5432/tasklets
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+      - NODE_ENV=development
+    ports:
+      - "4010:4010"  # Client Portal
+      - "4020:4020"  # Internal Portal
+      - "4030:4030"  # API Server
+    volumes:
+      - ./backend-tsklets:/app/backend-tsklets
+      - ./frontend-tsklets:/app/frontend-tsklets
+      - /app/node_modules
+      - /app/backend-tsklets/api/node_modules
+      - /app/frontend-tsklets/client/node_modules
+      - /app/frontend-tsklets/internal/node_modules
+
+networks:
+  tsklets-network:
+    external: true

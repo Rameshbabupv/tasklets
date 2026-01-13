@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: docker.io/library/postgres:18
+    container_name: tsklets-db
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME:-tasklets}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tsklets-network
+
+  # Tsklets Application
+  app:
+    image: ghcr.io/rameshbabupv/tasklets:latest
+    container_name: tsklets-app
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-tasklets}
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=production
+      - PORT=4030
+      - CLIENT_PORT=4010
+      - INTERNAL_PORT=4020
+    ports:
+      - "4010:4010"  # Client Portal
+      - "4020:4020"  # Internal Portal
+      - "4030:4030"  # API Server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tsklets-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4030/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  tsklets-network:
+    driver: bridge

@@ -1,0 +1,21 @@
+# Development Dockerfile for Tsklets Application
+FROM node:24-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+COPY frontend-tsklets/client/package*.json ./frontend-tsklets/client/
+COPY frontend-tsklets/internal/package*.json ./frontend-tsklets/internal/
+COPY backend-tsklets/api/package*.json ./backend-tsklets/api/
+
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Expose ports
+EXPOSE 4010 4020 4030
+
+# Start all services in development mode
+CMD ["npm", "run", "dev"]
