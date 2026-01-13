@@ -386,7 +386,7 @@ export default function Sprints() {
               )}
 
               {/* Velocity Chart */}
-              {velocityData?.sprints?.length > 0 && (
+              {velocityData?.sprints && velocityData.sprints.length > 0 && (
                 <div className="mt-6">
                   <h3 className="text-sm font-semibold uppercase tracking-wider mb-3" style={textMuted}>
                     Velocity Trend
@@ -394,9 +394,9 @@ export default function Sprints() {
                   <div className="rounded-xl border p-6" style={surfaceStyles}>
                     <div className="flex items-end justify-between gap-4 h-48">
                       {velocityData.sprints.map((sprint) => {
-                        const maxVelocity = Math.max(...velocityData.sprints.map(s => s.velocity), 1)
+                        const maxVelocity = Math.max(...velocityData.sprints!.map(s => s.velocity), 1)
                         const heightPercent = (sprint.velocity / maxVelocity) * 100
-                        const isAboveAvg = sprint.velocity >= velocityData.average
+                        const isAboveAvg = sprint.velocity >= (velocityData.average || 0)
                         return (
                           <div key={sprint.id} className="flex-1 flex flex-col items-center gap-2">
                             <span className="text-sm font-semibold" style={textPrimary}>

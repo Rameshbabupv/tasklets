@@ -1,5 +1,6 @@
 import { db } from '../db/index.js';
 import { tenants, clients, users, products, clientProducts, userProducts, teams, ideas } from '../db/schema.js';
+import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 
 const PASSWORD = 'Systech@123';
@@ -12,7 +13,7 @@ async function seedSampleData() {
 
     // === GET OR CREATE TENANT ===
     console.log('🏢 Getting SysTech tenant...');
-    let [sysTechTenant] = await db.select().from(tenants).where((t) => t.name === 'SysTech');
+    let [sysTechTenant] = await db.select().from(tenants).where(eq(tenants.name, 'SysTech'));
 
     if (!sysTechTenant) {
       const created = await db.insert(tenants).values({
@@ -160,7 +161,7 @@ async function seedSampleData() {
 
       // Assign to client's products
       const clientProdLinks = await db.select().from(clientProducts).where(
-        (cp) => cp.clientId === client.id
+        eq(clientProducts.clientId, client.id)
       );
       for (const link of clientProdLinks) {
         await db.insert(userProducts).values({
