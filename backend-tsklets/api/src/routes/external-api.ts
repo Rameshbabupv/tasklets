@@ -53,7 +53,7 @@ externalApiRoutes.get('/configs/:slug', requireScope('read'), async (req: Reques
         tenantId,
         configId: config.id,
         userId,
-        accessType: 'api',
+        action: 'view',
       })
       .catch(err => console.error('Failed to record usage:', err))
 
@@ -104,7 +104,7 @@ externalApiRoutes.get('/configs/:slug/raw', requireScope('read'), async (req: Re
         tenantId,
         configId: config.id,
         userId,
-        accessType: 'api_raw',
+        action: 'view',
       })
       .catch(err => console.error('Failed to record usage:', err))
 
@@ -116,7 +116,7 @@ externalApiRoutes.get('/configs/:slug/raw', requireScope('read'), async (req: Re
       text: 'text/plain',
     }
 
-    res.setHeader('Content-Type', contentTypes[config.contentType] || 'text/plain')
+    res.setHeader('Content-Type', contentTypes[config.contentType ?? 'text'] || 'text/plain')
     res.send(config.content)
   } catch (error) {
     console.error('Get raw content error:', error)
@@ -176,7 +176,7 @@ externalApiRoutes.post('/configs/:slug/render', requireScope('read'), async (req
         tenantId,
         configId: config.id,
         userId,
-        accessType: 'api_render',
+        action: 'execute',
       })
       .catch(err => console.error('Failed to record usage:', err))
 

@@ -486,6 +486,8 @@ export async function seedAiConfigs(tenantId: number) {
     await db.insert(aiConfigs).values({
       ...config,
       tenantId,
+      visibility: config.visibility as 'private' | 'team' | 'public',
+      contentType: config.contentType as 'text' | 'json' | 'yaml' | 'markdown',
     }).onConflictDoNothing()
   }
   console.log(`Seeded ${aiConfigsData.length} AI configs`)
@@ -497,7 +499,7 @@ export async function seedAiConfigs(tenantId: number) {
       configId: config.id,
       version: 1,
       content: config.content,
-      contentType: config.contentType,
+      contentType: config.contentType as 'text' | 'json' | 'yaml' | 'markdown',
       variables: config.variables,
       changeNote: 'Initial version',
       createdBy: config.createdBy,

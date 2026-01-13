@@ -193,6 +193,7 @@ async function seed() {
   // Tasks for Lead Scoring
   const [task1] = await db.insert(devTasks).values({
     tenantId: sysTechTenant.id,
+    productId: findProduct('CRM Sales'),
     featureId: leadScoringFeature.id,
     title: 'Design scoring algorithm',
     description: 'Define scoring rules and weightage for different attributes',
@@ -204,6 +205,7 @@ async function seed() {
 
   const [task2] = await db.insert(devTasks).values({
     tenantId: sysTechTenant.id,
+    productId: findProduct('CRM Sales'),
     featureId: leadScoringFeature.id,
     title: 'Implement scoring API endpoint',
     description: 'Create POST /api/leads/:id/score endpoint',
@@ -215,6 +217,7 @@ async function seed() {
 
   const [task3] = await db.insert(devTasks).values({
     tenantId: sysTechTenant.id,
+    productId: findProduct('CRM Sales'),
     featureId: leadScoringFeature.id,
     title: 'Build scoring dashboard UI',
     description: 'Display lead scores in the CRM dashboard with color coding',
@@ -243,6 +246,7 @@ async function seed() {
 
   const [task4] = await db.insert(devTasks).values({
     tenantId: sysTechTenant.id,
+    productId: findProduct('CRM Sales'),
     featureId: pipelineFeature.id,
     title: 'Design pipeline stages',
     description: 'Define default stages and custom stage configuration',
@@ -254,6 +258,7 @@ async function seed() {
 
   const [task5] = await db.insert(devTasks).values({
     tenantId: sysTechTenant.id,
+    productId: findProduct('CRM Sales'),
     featureId: pipelineFeature.id,
     title: 'Implement drag-drop library',
     description: 'Integrate react-beautiful-dnd for pipeline board',
@@ -290,6 +295,7 @@ async function seed() {
 
   const [task6] = await db.insert(devTasks).values({
     tenantId: sysTechTenant.id,
+    productId: findProduct('HRM v2'),
     featureId: biometricFeature.id,
     title: 'Research device APIs',
     description: 'Document API specifications for all 3 device types',
@@ -306,6 +312,7 @@ async function seed() {
   // Bug task
   const [bugTask] = await db.insert(devTasks).values({
     tenantId: sysTechTenant.id,
+    productId: findProduct('CRM Sales'),
     featureId: leadScoringFeature.id,
     title: 'Fix lead score calculation for null values',
     description: 'Handle null demographics gracefully without breaking scoring',

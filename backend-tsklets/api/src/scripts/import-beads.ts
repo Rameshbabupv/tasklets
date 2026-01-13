@@ -197,7 +197,7 @@ async function importBeads() {
 
         if (!parentEpicId && epicIssues.length > 0) {
           // Fallback: assign to first epic if no parent specified
-          parentEpicId = beadsToEpicId.values().next().value;
+          parentEpicId = beadsToEpicId.values().next().value ?? null;
         }
 
         if (!parentEpicId) {
@@ -262,7 +262,7 @@ async function importBeads() {
 
         if (!parentFeatureId && featureIssues.length > 0) {
           // Fallback: assign to first feature if no parent specified
-          parentFeatureId = beadsToFeatureId.values().next().value;
+          parentFeatureId = beadsToFeatureId.values().next().value ?? null;
         }
 
         const [result] = await db
