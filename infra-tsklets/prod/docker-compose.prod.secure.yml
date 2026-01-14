@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: docker.io/library/postgres:18
+    container_name: tsklets-db
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME:-tasklets}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    # ✅ SECURITY: No ports exposed - only accessible from app container
+    # ports:
+    #   - "5432:5432"  # ❌ Removed: Database not accessible from outside
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tsklets-network
+    # ✅ SECURITY: Resource limits to prevent resource exhaustion
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Tsklets Application
+  app:
+    image: ghcr.io/rameshbabupv/tasklets:latest
+    container_name: tsklets-app
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-tasklets}
+      - JWT_SECRET=${JWT_SECRET}
+      - NODE_ENV=production
+      - PORT=4030
+      - CLIENT_PORT=4010
+      - INTERNAL_PORT=4020
+      # ✅ SECURITY: Add CORS origins
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+    ports:
+      - "4010:4010"  # Client Portal
+      - "4020:4020"  # Internal Portal
+      - "4030:4030"  # API Server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tsklets-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4030/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # ✅ SECURITY: Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    # ✅ SECURITY: Read-only root filesystem (optional - uncomment if app allows)
+    # read_only: true
+    # tmpfs:
+    #   - /tmp
+    #   - /app/uploads
+
+volumes:
+  postgres_data:
+    driver: local
+    # ✅ SECURITY: Volume permissions
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/lib/podman-volumes/tsklets-data
+
+networks:
+  tsklets-network:
+    driver: bridge
+    # ✅ SECURITY: Internal network only
+    internal: false  # Set to true to block all external access
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
